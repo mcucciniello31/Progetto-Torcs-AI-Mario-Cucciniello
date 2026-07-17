@@ -113,7 +113,15 @@ class SimulatedHumanDriver:
 
     def reset_lap_parameters(self):
         # Varia la velocità del giro (alcuni giri lenti e prudenti, altri veloci ed al limite)
-        self.target_speed = random.uniform(80.0, 106.0)
+        # 60% giri veloci (120-135 km/h), 25% giri medi (100-120 km/h), 15% giri lenti (80-100 km/h)
+        rand = random.random()
+        if rand < 0.60:
+            self.target_speed = random.uniform(120.0, 135.0)
+        elif rand < 0.85:
+            self.target_speed = random.uniform(100.0, 120.0)
+        else:
+            self.target_speed = random.uniform(80.0, 100.0)
+            
         # Livello di precisione di questo giro (simula stanchezza/attenzione)
         self.steer_noise = random.uniform(0.01, 0.04)
         # Soglia oltre la quale l'umano decide di correggere lo sterzo
@@ -144,6 +152,10 @@ class SimulatedHumanDriver:
         brake_ideal = 0.0
         if abs(angle) > 0.90:
             brake_ideal = 0.3
+            
+        # Applica freno se la velocità supera significativamente il target della curva
+        if speed_x > (curve_target_speed + 10.0):
+            brake_ideal = max(brake_ideal, min(0.5, (speed_x - curve_target_speed) / 20.0))
 
         # --- 2. Trasformazione in Input da Tastiera Discreto (ON/OFF) ---
         # Simula la pressione del tasto Sinistra (1.0), Destra (-1.0) o Nessuno (0.0)
