@@ -122,10 +122,10 @@ class SimulatedHumanDriver:
         else:
             self.target_speed = random.uniform(80.0, 100.0)
             
-        # Livello di precisione di questo giro (simula stanchezza/attenzione)
-        self.steer_noise = random.uniform(0.01, 0.04)
-        # Soglia oltre la quale l'umano decide di correggere lo sterzo
-        self.steer_threshold = random.uniform(0.04, 0.09)
+        # Rimosso rumore ad alta frequenza per evitare oscillazioni laterali continue
+        self.steer_noise = 0.0
+        # Soglia ridotta al minimo per rendere lo sterzo pronto e allineato
+        self.steer_threshold = 0.005
 
     def update(self, sensors, prev_accel):
         speed_x = sensors.get('speedX', 0.0)
@@ -160,12 +160,10 @@ class SimulatedHumanDriver:
         # --- 2. Trasformazione in Input da Tastiera Discreto (ON/OFF) ---
         # Simula la pressione del tasto Sinistra (1.0), Destra (-1.0) o Nessuno (0.0)
         target_steer = 0.0
-        # Aggiunge un micro rumore umano alla decisione di sterzare
-        steer_decision = steer_ideal + random.normalvariate(0, self.steer_noise)
         
-        if steer_decision > self.steer_threshold:
+        if steer_ideal > self.steer_threshold:
             target_steer = 1.0  # Tasto Freccia Sinistra premuto
-        elif steer_decision < -self.steer_threshold:
+        elif steer_ideal < -self.steer_threshold:
             target_steer = -1.0  # Tasto Freccia Destra premuto
 
         # Simula pressione tasto acceleratore (ON/OFF)
