@@ -157,49 +157,34 @@ class SimulatedHumanDriver:
         if speed_x > (curve_target_speed + 10.0):
             brake_ideal = max(brake_ideal, min(0.5, (speed_x - curve_target_speed) / 20.0))
 
-        # --- 2. Trasformazione in Input da Tastiera Discreto (ON/OFF) ---
-        # Simula la pressione del tasto Sinistra (1.0), Destra (-1.0) o Nessuno (0.0)
-        target_steer = 0.0
-        
-        if steer_ideal > self.steer_threshold:
-            target_steer = 1.0  # Tasto Freccia Sinistra premuto
-        elif steer_ideal < -self.steer_threshold:
-            target_steer = -1.0  # Tasto Freccia Destra premuto
+        # --- 2. Trasformazione in Input ---
+        # Per eliminare qualsiasi oscillazione laterale (effetto bang-bang), usiamo direttamente
+        # lo sterzo, l'acceleratore e il freno analogici ideali come target.
+        target_steer = steer_ideal
+        target_accel = accel_ideal
+        target_brake = brake_ideal
 
-        # Simula pressione tasto acceleratore (ON/OFF)
-        target_accel = 0.0
-        if accel_ideal > 0.4 and brake_ideal < 0.1:
-            target_accel = 1.0  # Tasto Freccia Su premuto
-            # Simula piccoli rilasci della tastiera (taps) a velocità massima
-            if speed_x > self.target_speed - 5.0 and random.random() < 0.15:
-                target_accel = 0.0
-
-        # Simula pressione tasto freno (ON/OFF)
-        target_brake = 0.0
-        if brake_ideal > 0.1:
-            target_brake = 1.0  # Tasto Freccia Giù premuto
-
-        # --- 3. Applicazione del Filtro di Smoothing della Tastiera (Uguale al client manuale) ---
+        # --- 3. Applicazione del Filtro di Smoothing (Low-pass filter realistico) ---
         # Sterzo progressivo
-        self.steer += 0.15 * (target_steer - self.steer)
+        self.steer += 0.25 * (target_steer - self.steer)
         
         # Riduzione sterzo in velocità
         if speed_x > 50.0:
-            self.steer *= max(0.3, 1.0 - (speed_x - 50.0) / 250.0)
+            self.steer *= max(0.4, 1.0 - (speed_x - 50.0) / 250.0)
             
-        # Stabilizzazione automatica (il feedback passivo del veicolo)
-        final_steer = self.steer + 0.25 * angle
+        # Allineamento e limite
+        final_steer = self.steer + 0.15 * angle
         final_steer = max(-1.0, min(1.0, final_steer))
 
         # Gas progressivo
-        self.accel += 0.20 * (target_accel - self.accel)
+        self.accel += 0.25 * (target_accel - self.accel)
         self.accel = max(0.0, min(1.0, self.accel))
 
         # Freno progressivo
         self.brake += 0.25 * (target_brake - self.brake)
         self.brake = max(0.0, min(1.0, self.brake))
 
-        # Controllo trazione umano (rilascio parziale del gas se le ruote slittano)
+        # Controllo trazione (rilascio parziale del gas se le ruote slittano)
         wsv = sensors.get('wheelSpinVel', [0.0]*4)
         if ((wsv[2] + wsv[3]) - (wsv[0] + wsv[1])) > 2.0:
             self.accel = max(0.0, self.accel - 0.15)
