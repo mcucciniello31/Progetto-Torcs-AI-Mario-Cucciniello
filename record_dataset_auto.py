@@ -256,6 +256,7 @@ def main():
     lap_number = 1
     prev_lap_time = 0.0
     prev_damage = 0.0
+    stuck_time = 0.0
     buffer = []
     
     print("\nIn attesa di TORCS... (Avvia la corsa Practice/Race su TORCS)")
@@ -319,6 +320,22 @@ def main():
                 time.sleep(0.5)
                 continue
 
+            # Rileva se la macchina è rimasta bloccata/ferma per troppo tempo (es. contro un muro)
+            if speed_x < 5.0 and cur_lap_time > 8.0:
+                stuck_time += (cur_lap_time - prev_lap_time)
+                if stuck_time > 6.0:  # ferma per più di 6 secondi
+                    print(f"\n>>> [RILEVATO BLOCCO] La vettura è rimasta bloccata. Giro scartato. Riavvio...")
+                    buffer = []
+                    R.d['meta'] = 1
+                    so.sendto(str(R).encode(), (HOST, PORT))
+                    prev_damage = damage
+                    prev_lap_time = 0.0
+                    stuck_time = 0.0
+                    time.sleep(0.5)
+                    continue
+            else:
+                stuck_time = 0.0
+                
             # Aggiorna il pilota simulato
             steer, accel, brake = driver.update(S.d, R.d['accel'])
             
