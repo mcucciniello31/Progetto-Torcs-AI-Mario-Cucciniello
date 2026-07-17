@@ -132,59 +132,39 @@ class SimulatedHumanDriver:
         angle = sensors.get('angle', 0.0)
         track_pos = sensors.get('trackPos', 0.0)
 
-        # --- 1. Decisione ideale del bot ---
-        # Sterzata ideale
-        steer_ideal = (angle * 15.0 / math.pi) - (track_pos * 0.20)
-        
+        # --- 1. Calcolo sterzo (Controllore Proporzionale Puro) ---
+        # Usiamo il guadagno originale (30.0) e rimuoviamo latenza e riduzioni di velocità.
+        # Questo garantisce che l'auto curvi istantaneamente e con forza sufficiente nelle curve veloci.
+        steer = (angle * 30.0 / math.pi) - (track_pos * 0.20)
+        final_steer = max(-1.0, min(1.0, steer))
+
+        # --- 2. Calcolo target velocità e controllo gas/freno ---
         # Velocità target adattata alla curva
-        curve_target_speed = self.target_speed - abs(steer_ideal) * 3.0
+        curve_target_speed = self.target_speed - abs(final_steer) * 3.0
         
-        # Gas ideale
-        accel_ideal = 0.0
-        if speed_x < curve_target_speed:
-            accel_ideal = min(1.0, prev_accel + 0.3)
-        else:
-            accel_ideal = max(0.0, prev_accel - 0.2)
-        if speed_x < 10.0:
-            accel_ideal += 0.5
-            
-        # Freno ideale
-        brake_ideal = 0.0
-        if abs(angle) > 0.90:
-            brake_ideal = 0.3
-            
-        # Applica freno se la velocità supera significativamente il target della curva
-        if speed_x > (curve_target_speed + 10.0):
-            brake_ideal = max(brake_ideal, min(0.5, (speed_x - curve_target_speed) / 20.0))
-
-        # --- 2. Trasformazione in Input ---
-        # Per eliminare qualsiasi oscillazione laterale (effetto bang-bang), usiamo direttamente
-        # lo sterzo, l'acceleratore e il freno analogici ideali come target.
-        target_steer = steer_ideal
-        target_accel = accel_ideal
-        target_brake = brake_ideal
-
-        # --- 3. Applicazione del Filtro di Smoothing (Low-pass filter realistico) ---
-        # Sterzo progressivo
-        self.steer += 0.25 * (target_steer - self.steer)
-        
-        # Riduzione sterzo in velocità
-        if speed_x > 50.0:
-            self.steer *= max(0.4, 1.0 - (speed_x - 50.0) / 250.0)
-            
-        # Allineamento e limite
-        final_steer = self.steer + 0.15 * angle
-        final_steer = max(-1.0, min(1.0, final_steer))
-
         # Gas progressivo
-        self.accel += 0.25 * (target_accel - self.accel)
+        accel_target = 0.0
+        if speed_x < curve_target_speed:
+            accel_target = min(1.0, prev_accel + 0.3)
+        else:
+            accel_target = max(0.0, prev_accel - 0.2)
+        if speed_x < 10.0:
+            accel_target += 0.5
+            
+        self.accel += 0.25 * (accel_target - self.accel)
         self.accel = max(0.0, min(1.0, self.accel))
 
-        # Freno progressivo
-        self.brake += 0.25 * (target_brake - self.brake)
+        # Freno progressivo con logica di sicurezza in curva
+        brake_target = 0.0
+        if abs(angle) > 0.90:
+            brake_target = 0.3
+        if speed_x > (curve_target_speed + 10.0):
+            brake_target = max(brake_target, min(0.5, (speed_x - curve_target_speed) / 20.0))
+
+        self.brake += 0.25 * (brake_target - self.brake)
         self.brake = max(0.0, min(1.0, self.brake))
 
-        # Controllo trazione (rilascio parziale del gas se le ruote slittano)
+        # Controllo trazione
         wsv = sensors.get('wheelSpinVel', [0.0]*4)
         if ((wsv[2] + wsv[3]) - (wsv[0] + wsv[1])) > 2.0:
             self.accel = max(0.0, self.accel - 0.15)
