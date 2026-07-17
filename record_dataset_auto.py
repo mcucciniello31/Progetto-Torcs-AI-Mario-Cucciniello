@@ -267,6 +267,11 @@ def main():
                 buf, _ = so.recvfrom(DATA_SIZE)
             except socket.timeout:
                 print(".", end="", flush=True)
+                # Invia nuovamente init in caso di timeout (il server si è riavviato ed è in attesa)
+                try:
+                    so.sendto(initmsg.encode(), (HOST, PORT))
+                except Exception:
+                    pass
                 continue
 
             if not buf:
