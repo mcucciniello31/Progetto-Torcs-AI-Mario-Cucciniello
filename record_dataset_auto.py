@@ -303,7 +303,8 @@ def main():
                 # Riavvia la simulazione
                 R.d['meta'] = 1
                 so.sendto(str(R).encode(), (HOST, PORT))
-                time.sleep(0.5)
+                time.sleep(1.5)
+                so.sendto(initmsg.encode(), (HOST, PORT))
                 continue
 
             # Rileva sbandata critica / fuori pista (trackPos > 1.3)
@@ -317,7 +318,8 @@ def main():
                 so.sendto(str(R).encode(), (HOST, PORT))
                 prev_damage = damage
                 prev_lap_time = 0.0
-                time.sleep(0.5)
+                time.sleep(1.5)
+                so.sendto(initmsg.encode(), (HOST, PORT))
                 continue
 
             # Rileva se la macchina è rimasta bloccata/ferma per troppo tempo (es. contro un muro)
@@ -331,7 +333,8 @@ def main():
                     prev_damage = damage
                     prev_lap_time = 0.0
                     stuck_time = 0.0
-                    time.sleep(0.5)
+                    time.sleep(1.5)
+                    so.sendto(initmsg.encode(), (HOST, PORT))
                     continue
             else:
                 stuck_time = 0.0
