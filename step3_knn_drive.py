@@ -205,10 +205,12 @@ def main():
                 # 2. GUIDA AUTONOMA KNN
                 # Fase di lancio iniziale sul rettilineo principale (fino a 125 km/h)
                 if not agent.launched:
-                    if speed_x < 125.0:
+                    if speed_x < 120.0:
                         accel = 1.0
                         brake = 0.0
-                        steer = 0.0  # Vai perfettamente dritto per evitare le barriere laterali
+                        # Centra l'auto sulla pista durante la partenza usando solo track_pos (evita deviazioni)
+                        steer = -track_pos * 0.30
+                        steer = np.clip(steer, -0.2, 0.2)
                     else:
                         agent.launched = True
                         steer, accel, brake = agent.act(S.d)
