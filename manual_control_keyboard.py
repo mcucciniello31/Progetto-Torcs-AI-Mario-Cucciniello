@@ -258,24 +258,15 @@ def main():
                 time.sleep(0.5)
                 continue
 
-            # Rilevamento sbandata / fuori pista grave o danno
-            if abs(track_pos) > TRACK_LIMIT or damage > (prev_damage + 120.0):
-                if buffer:
-                    print(f"\n>>> [ANNULLATO] Auto fuori pista o danneggiata. Giro scartato.")
-                    buffer = []
-                # Riavvia automaticamente per rimettere l'auto in griglia
-                R.d['meta'] = 1
-                R.d['gear'] = 1
-                R.d['steer'] = 0.0
-                R.d['accel'] = 0.0
-                R.d['brake'] = 0.0
-                so.sendto(str(R).encode(), (HOST, PORT))
-                prev_damage = damage
-                prev_lap_time = 0.0
-                continue
-
             # Aggiorna controlli dal tastierino
             steer, accel, brake, gear, meta = ctrl.update(S.d)
+
+            # Se l'utente preme 'R' per riavviare manualmente, svuota il buffer del giro
+            if meta == 1:
+                print(f"\n>>> [ANNULLATO] Gara riavviata manualmente. Giro scartato.")
+                buffer = []
+                prev_lap_time = 0.0
+                prev_damage = damage
 
             # Costruisci risposta per TORCS
             R.d['steer'] = steer
