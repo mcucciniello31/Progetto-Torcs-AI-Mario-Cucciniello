@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AI-AutonomeGuide - step2_train_knn.py
+AI-AutonomeGuide - addestramento_knn.py
 ======================================
 Legge il dataset pulito e addestra un KNeighborsRegressor multi-output per predire
 steer, accel e brake a partire dai sensori di bordo.
@@ -46,7 +46,7 @@ def load_data():
         if not os.path.exists(path):
             raise FileNotFoundError(
                 f"File non trovato: {path}\n"
-                "Assicurati di aver eseguito step1_prepare_data.py."
+                "Assicurati di aver eseguito preparazione_dataset.py."
             )
 
     df = pd.read_csv(clean_path)

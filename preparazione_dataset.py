@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AI-AutonomeGuide - step1_prepare_data.py
+AI-AutonomeGuide - preparazione_dataset.py
 ========================================
 Unisce tutti i CSV dei giri presenti in dataset_laps/, esegue la pulizia dei dati,
 seleziona i giri migliori e genera i file per l'addestramento.

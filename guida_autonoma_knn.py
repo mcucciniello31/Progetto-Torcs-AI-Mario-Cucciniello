@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AI-AutonomeGuide - step3_knn_drive.py
+AI-AutonomeGuide - guida_autonoma_knn.py
 ======================================
 Carica lo Scaler e il modello KNN addestrati per guidare l'auto in TORCS
 in tempo reale usando il protocollo UDP SCR.
@@ -12,7 +12,7 @@ Dipende da:
 
 Esecuzione:
   conda activate torcs-env
-  python step3_knn_drive.py
+  python guida_autonoma_knn.py
 """
 
 import socket
@@ -89,7 +89,7 @@ class KNNAgent:
             if not os.path.exists(path):
                 raise FileNotFoundError(
                     f"File non trovato: {path}\n"
-                    "Assicurati di aver completato step1_prepare_data.py e step2_train_knn.py."
+                    "Assicurati di aver completato preparazione_dataset.py e addestramento_knn.py."
                 )
 
         with open(model_path, "rb") as f:
