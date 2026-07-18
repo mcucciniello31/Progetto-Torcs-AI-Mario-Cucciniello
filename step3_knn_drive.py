@@ -99,6 +99,7 @@ class KNNAgent:
         with open(feature_path, "rb") as f:
             self.features = pickle.load(f)
 
+        self.launched = False  # Flag per gestire la partenza da fermo nel rettilineo principale
         print(f"Modello KNN caricato correttamente ({len(self.features)} feature di input).")
 
     def act(self, S_d):
@@ -202,17 +203,29 @@ def main():
                 brake = 0.0
             else:
                 # 2. GUIDA AUTONOMA KNN
-                steer, accel, brake = agent.act(S.d)
-                
-                # Override di partenza / bassa velocità per prevenire stalli e deviazioni (fino a 90 km/h)
-                if speed_x < 90.0:
-                    accel = 1.0
-                    brake = 0.0
-                    steer = 0.0  # Vai dritto durante la partenza per un lancio stabile ed evitare le barriere
-                
-                # Applica una correzione di sicurezza se lo sterzo del KNN è instabile sul dritto
-                if abs(track_pos) < 0.1 and abs(angle) < 0.02:
-                    steer = 0.0  # mantieni dritto
+                # Fase di lancio iniziale sul rettilineo principale (fino a 125 km/h)
+                if not agent.launched:
+                    if speed_x < 125.0:
+                        accel = 1.0
+                        brake = 0.0
+                        steer = 0.0  # Vai perfettamente dritto per evitare le barriere laterali
+                    else:
+                        agent.launched = True
+                        steer, accel, brake = agent.act(S.d)
+                else:
+                    # Guida autonoma normale controllata dal modello KNN
+                    steer, accel, brake = agent.act(S.d)
+                    
+                    # Logica di salvataggio a bassissima velocità per evitare stalli in caso di testacoda
+                    if speed_x < 15.0:
+                        accel = 1.0
+                        brake = 0.0
+                        steer = (angle * 30.0 / np.pi) - (track_pos * 0.20)
+                        steer = np.clip(steer, -0.3, 0.3)
+                    
+                    # Applica una correzione di sicurezza se lo sterzo del KNN è instabile sul dritto ad alta velocità
+                    if abs(track_pos) < 0.1 and abs(angle) < 0.02:
+                        steer = 0.0
 
             # 3. CAMBIO MARCIA AUTOMATICO (Molto più robusto del cambio appreso)
             gear = 1
