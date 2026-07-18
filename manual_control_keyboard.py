@@ -16,6 +16,7 @@ import sys
 import os
 import time
 import csv
+import argparse
 import numpy as np
 from pynput import keyboard
 
@@ -165,25 +166,35 @@ class KeyboardController:
         return final_steer, self.accel, self.brake, self.gear, meta_out
 
 
-def save_to_disk(buffer, headers, lap_number, lap_time):
+def save_to_disk(buffer, headers, lap_number, lap_time, is_recovery):
     if not buffer: return
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     minutes = int(lap_time // 60)
     seconds = int(lap_time % 60)
     milliseconds = int((lap_time % 1) * 1000)
     time_str = f"{minutes:02d}-{seconds:02d}-{milliseconds:03d}"
-    filename = f"lap_{lap_number:03d}_time_{time_str}_{timestamp}.csv"
+    prefix = "recovery_lap" if is_recovery else "lap"
+    filename = f"{prefix}_{lap_number:03d}_time_{time_str}_{timestamp}.csv"
     filepath = os.path.join(DATASET_DIR, filename)
     with open(filepath, "w", newline='') as f:
         writer = csv.writer(f)
         writer.writerow(headers)
         writer.writerows(buffer)
-    print(f"\n>>> [GIRO COMPLETATO & SALVATO] Giro: {lap_number} | Tempo: {time_str}")
+    print(f"\n>>> [GIRO COMPLETATO & SALVATO] {prefix.upper()}: {lap_number} | Tempo: {time_str}")
 
 
 def main():
+    parser = argparse.ArgumentParser(description="AI-AutonomeGuide - Manual Control Keyboard Recorder")
+    parser.add_argument("--recovery", action="store_true", help="Salva i giri registrati come recovery_lap_ invece di lap_")
+    args = parser.parse_args()
+    is_recovery = args.recovery
+
     print("=" * 60)
     print(" AI-AutonomeGuide - GUIDA MANUALE E REGISTRAZIONE DATASET")
+    if is_recovery:
+        print(" (MODALITÀ REGISTRAZIONE RECOVERY LAPS: recovery_lap_*.csv)")
+    else:
+        print(" (MODALITÀ REGISTRAZIONE NORMAL LAPS: lap_*.csv)")
     print("=" * 60)
     print("Controlli:")
     print("  - Frecce Direzionali : Sterzo / Gas / Freno")
@@ -247,7 +258,7 @@ def main():
             # Rilevamento completamento giro (reset curLapTime dopo aver corso)
             if cur_lap_time < prev_lap_time and prev_lap_time > 10.0:
                 # Salva il giro
-                save_to_disk(buffer, HEADERS, lap_number, prev_lap_time)
+                save_to_disk(buffer, HEADERS, lap_number, prev_lap_time, is_recovery)
                 lap_number += 1
                 buffer = []
                 prev_lap_time = 0.0
