@@ -1,0 +1,5 @@
+dataset_laps_generated_backup/
+*.zip
+*.log
+__pycache__/
+.DS_Store
