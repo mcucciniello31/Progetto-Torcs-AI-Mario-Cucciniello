@@ -221,7 +221,15 @@ def manual_recording():
 
             gear = S.d.get('gear', 1) if abs(steer) > 0.4 else target_gear
 
-            R.d['steer'], R.d['accel'], R.d['brake'], R.d['gear'] = steer, accel, brake, gear
+            # Rileva pulsante di restart sul controller (Triangolo=3, Share=8, Options=9)
+            meta = 0
+            for btn_id in [3, 8, 9]:
+                if btn_id < js.get_numbuttons() and js.get_button(btn_id):
+                    meta = 1
+                    print("\n>>> [RESET] Riavvio richiesto dal controller...")
+                    break
+
+            R.d['steer'], R.d['accel'], R.d['brake'], R.d['gear'], R.d['meta'] = steer, accel, brake, gear, meta
 
             # --- REGISTRAZIONE ---
             if headers is None:
