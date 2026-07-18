@@ -204,6 +204,11 @@ def main():
                 # 2. GUIDA AUTONOMA KNN
                 steer, accel, brake = agent.act(S.d)
                 
+                # Override di partenza / bassa velocità per prevenire stalli
+                if speed_x < 15.0:
+                    accel = 1.0
+                    brake = 0.0
+                
                 # Applica una correzione di sicurezza se lo sterzo del KNN è instabile sul dritto
                 if abs(track_pos) < 0.1 and abs(angle) < 0.02:
                     steer = 0.0  # mantieni dritto
