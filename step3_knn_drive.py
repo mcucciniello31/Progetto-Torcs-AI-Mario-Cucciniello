@@ -208,9 +208,7 @@ def main():
                 if speed_x < 15.0:
                     accel = 1.0
                     brake = 0.0
-                    # Usa una guida proporzionale dolce per tenere l'auto centrata all'avvio
-                    steer = (angle * 10.0 / np.pi) - (track_pos * 0.20)
-                    steer = np.clip(steer, -0.3, 0.3)
+                    steer = 0.0  # Vai dritto durante la partenza per un lancio stabile ed evitare le barriere
                 
                 # Applica una correzione di sicurezza se lo sterzo del KNN è instabile sul dritto
                 if abs(track_pos) < 0.1 and abs(angle) < 0.02:
