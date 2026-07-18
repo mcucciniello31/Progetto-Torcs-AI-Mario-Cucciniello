@@ -204,8 +204,8 @@ def main():
                 # 2. GUIDA AUTONOMA KNN
                 steer, accel, brake = agent.act(S.d)
                 
-                # Override di partenza / bassa velocità per prevenire stalli e deviazioni (fino a 45 km/h)
-                if speed_x < 45.0:
+                # Override di partenza / bassa velocità per prevenire stalli e deviazioni (fino a 90 km/h)
+                if speed_x < 90.0:
                     accel = 1.0
                     brake = 0.0
                     steer = 0.0  # Vai dritto durante la partenza per un lancio stabile ed evitare le barriere
