@@ -55,7 +55,7 @@ TARGET_RANGES = {
 }
 
 # Iperparametri default
-DEFAULT_K         = 3            # numero vicini (ottimale da CV su questi dati)
+DEFAULT_K         = 4            # numero vicini (default se non cercato)
 DEFAULT_WEIGHTS   = "distance"   # "uniform" oppure "distance"
 DEFAULT_ALGO      = "ball_tree"  # piu' veloce di "brute" su dataset medi
 DEFAULT_METRIC    = "euclidean"
@@ -96,6 +96,33 @@ def prepare_xy(df: pd.DataFrame, features: list, scaler):
 # ─────────────────────────────────────────────
 # RICERCA AUTOMATICA DI K (opzionale)
 # ─────────────────────────────────────────────
+def find_best_k(X_train, y_train, k_range=range(3, 15, 2)):
+    """
+    Valuta vari valori di k tramite cross-validation (3-fold)
+    sul solo sterzo (il target più critico) e restituisce il migliore.
+    """
+    print("  Ricerca del k ottimale via 3-fold CV (steer)...")
+    best_k, best_score = DEFAULT_K, -np.inf
+
+    for k in k_range:
+        model = KNeighborsRegressor(
+            n_neighbors=k,
+            weights=DEFAULT_WEIGHTS,
+            algorithm=DEFAULT_ALGO,
+            metric=DEFAULT_METRIC,
+            n_jobs=-1
+        )
+        
+        scores = cross_val_score(model, X_train, y_train[:, 0], 
+                                 cv=3, scoring="r2", n_jobs=-1)
+        mean_r2 = scores.mean()
+        print(f"    k={k:>2}  R²_steer={mean_r2:.4f}")
+        if mean_r2 > best_score:
+            best_score = mean_r2
+            best_k = k
+
+    print(f"  → k ottimale selezionato: {best_k}  (R²={best_score:.4f})")
+    return best_k
 
 
 
@@ -219,6 +246,8 @@ def load_model() -> KNeighborsRegressor:
 # ─────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(description="Training KNN per Imitation Learning su TORCS")
+    parser.add_argument("--k",         type=int,  default=None,  help="Numero vicini")
+    parser.add_argument("--find-k",    action="store_true",      help="Cerca k ottimale via CV")
     parser.add_argument("--dataset",   type=str,  default="dataset_clean.csv", help="Nome file del dataset in models/ (default: dataset_clean.csv)")
     args = parser.parse_args()
 
@@ -235,9 +264,17 @@ def main():
         X, y, test_size=0.20, random_state=RANDOM_STATE
     )
 
-    # 3. Training (fixed k=3) (foto5: Addestramento KNN)
+    # 3. Training (foto5: Addestramento KNN)
     print("\n3/4 Addestramento KNN")
-    k = 3
+    if args.k:
+        k = args.k
+        print(f"  Uso k={k} (specificato da utente)")
+    elif args.find_k:
+        k = find_best_k(X_train, y_train)
+    else:
+        k = DEFAULT_K
+        print(f"  Uso k={k} (default)")
+
     model = train(X_train, y_train, k)
     save_model(model)
 
