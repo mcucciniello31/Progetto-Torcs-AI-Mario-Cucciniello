@@ -229,10 +229,10 @@ def main():
     # Prepara X, y
     X, y = prepare_xy(df, features, scaler)
 
-    # 2. Split train/test (75/25 split!) (foto4: Split per prevenire perdita di dati)
+    # 2. Split train/test (80/20 split) (foto4: Split per prevenire perdita di dati)
     print("\n2/4 Split per prevenire perdita di dati")
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.25, random_state=RANDOM_STATE
+        X, y, test_size=0.20, random_state=RANDOM_STATE
     )
 
     # 3. Training (fixed k=3) (foto5: Addestramento KNN)
