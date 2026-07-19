@@ -123,17 +123,13 @@ def evaluate(model: KNeighborsRegressor, X_test, y_test) -> dict:
     y_pred = model.predict(X_test)
     results = {}
 
-    print("\n── Risultati sul Test Set (75/25 split) ──────────────")
-    print(f"  {'Target':<18} {'MAE':>8} {'RMSE':>8} {'R²':>8}")
-    print("  " + "─" * 44)
-
     for i, col in enumerate(TARGET_COLS):
         mae  = mean_absolute_error(y_test[:, i], y_pred[:, i])
         rmse = np.sqrt(mean_squared_error(y_test[:, i], y_pred[:, i]))
         r2   = r2_score(y_test[:, i], y_pred[:, i])
         results[col] = {"mae": mae, "rmse": rmse, "r2": r2,
                         "y_true": y_test[:, i], "y_pred": y_pred[:, i]}
-        print(f"  {col:<18} {mae:>8.4f} {rmse:>8.4f} {r2:>8.4f}")
+        print(f"  {col}: MAE (Errore Assoluto Medio) = {mae:.4f} | RMSE (Radice dell'Errore Quadratico Medio) = {rmse:.4f} | R² (Coefficiente di Determinazione) = {r2:.4f}")
 
     return results
 
@@ -242,28 +238,6 @@ def main():
     print("\n  Generazione grafici...")
     plot_predictions(results)
     plot_residuals(results)
-
-    # Salvataggio Resoconto JSON
-    report = {
-        "k": k,
-        "results": {
-            col: {"mae": float(res["mae"]), "rmse": float(res["rmse"]), "r2": float(res["r2"])}
-            for col, res in results.items()
-        }
-    }
-    report_path = os.path.join(BASE_DIR, "reports", "report_step2.json")
-    with open(report_path, "w") as f:
-        json.dump(report, f, indent=4)
-
-    # Stima latenza inferenza (importante per real-time)
-    import time
-    n_queries = 500
-    t0 = time.perf_counter()
-    for _ in range(n_queries):
-        model.predict(X_test[:1])
-    dt_ms = (time.perf_counter() - t0) / n_queries * 1000
-    print(f"\n  Latenza media inferenza: {dt_ms:.2f} ms/step")
-    print(f"  (TORCS step rate: ~20ms → {'✓ OK' if dt_ms < 10 else '⚠ LENTO, considera riduzione feature o k'})")
 
     print("\n2°STEP COMPLETATO")
 
