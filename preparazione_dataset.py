@@ -277,9 +277,9 @@ def main():
     print("=" * 55)
 
     # 1. Carica
-    print(f"\n[1/6] Caricamento CSV da {args.dataset_dir}/...")
+    print(f"\n1/6 Caricamento CSV da {args.dataset_dir}/...")
     df_raw = load_all_laps(args.dataset_dir)
-    print("\n[2/6] Elaborazione di tutti i file CSV caricati.")
+    print("\n2/6 Elaborazione di tutti i file CSV caricati.")
 
     # Salva merged grezzo
     merged_path = os.path.join(MODELS_DIR, "dataset_merged.csv")
@@ -287,10 +287,10 @@ def main():
     print(f"  Dataset grezzo salvato: {merged_path}")
 
     # 2. Pulisci
-    print("\n[3/6] Pulizia dati...")
+    print("\n3/6 Pulizia dati...")
     df = clean_data(df_raw)
 
-    print("\n[4/6] Bilanciamento...")
+    print("\n4/6 Bilanciamento...")
     df = balance_data(df)
 
     clean_path = os.path.join(MODELS_DIR, "dataset_clean.csv")
@@ -298,13 +298,13 @@ def main():
     print(f"  Dataset pulito e bilanciato salvato: {clean_path}")
 
     # 3. Plot
-    print("\n[5/6] Generazione grafici EDA...")
+    print("\n5/6 Generazione grafici EDA...")
     plot_distributions(df)
     plot_correlations(df)
     plot_track_positions(df)
 
     # 4. Normalizzazione
-    print("\n[6/6] Normalizzazione e salvataggio scaler...")
+    print("\n6/6 Normalizzazione e salvataggio scaler...")
     normalize_and_save(df)
 
     # 5. Salvataggio Resoconto
@@ -318,8 +318,7 @@ def main():
     with open(report_path, "w") as f:
         json.dump(report, f, indent=4)
 
-    print("\n1 step completato")
-    print(f"Features: {len(FEATURE_COLS)}")
+    print(f"\n1°STEP COMPLETATO | Features: {len(FEATURE_COLS)}")
 
 
 if __name__ == "__main__":
