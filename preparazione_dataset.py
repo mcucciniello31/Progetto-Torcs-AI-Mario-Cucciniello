@@ -136,25 +136,25 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
 # ─────────────────────────────────────────────
 def balance_data(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Bilancia i dati: mantieni tutte le curve e fai undersampling dei rettilinei
-    affinché non superino di 1.5 volte il numero delle curve.
+    Bilancia i dati: mantieni tutte le curve, tutti i frame di frenata,
+    e fai undersampling dei rettilinei in cui non si frena.
     """
-    n_start = len(df)
+    # Un frame è "rettilineo passivo/attivo" se non si sta sterzando E non si sta frenando
+    straight_no_brake_mask = (df["target_steer"].abs() < 0.05) & (df["target_brake"] < 0.05)
     
-    straight_mask = df["target_steer"].abs() < 0.05
-    df_straight = df[straight_mask]
-    df_curve    = df[~straight_mask]
+    df_straight_nobrake = df[straight_no_brake_mask]
+    df_important = df[~straight_no_brake_mask] # curve e frenate importanti
     
-    n_straight = len(df_straight)
-    n_curve    = len(df_curve)
+    n_straight = len(df_straight_nobrake)
+    n_important = len(df_important)
     
-    print(f"  Analisi traiettorie iniziali: {n_straight} in rettilineo, {n_curve} in curva.")
+    print(f"  Analisi traiettorie: {n_straight} rettilinei (senza freno), {n_important} curve/frenate importanti.")
     
-    max_straight = int(n_curve * 1.5)
+    max_straight = int(n_important * 1.5)
     if n_straight > max_straight:
-        df_straight = df_straight.sample(n=max_straight, random_state=42)
+        df_straight_nobrake = df_straight_nobrake.sample(n=max_straight, random_state=42)
         
-    df_balanced = pd.concat([df_straight, df_curve]).sample(frac=1.0, random_state=42).reset_index(drop=True)
+    df_balanced = pd.concat([df_straight_nobrake, df_important]).sample(frac=1.0, random_state=42).reset_index(drop=True)
     return df_balanced
 
 
@@ -272,9 +272,6 @@ def main():
     parser.add_argument("--dataset-dir", type=str, default=DATASET_DIR, help="Cartella contenente i CSV da elaborare")
     args = parser.parse_args()
 
-    print("=" * 55)
-    print("  STEP 1 – Preparazione Dataset (Tutti i giri)")
-    print("=" * 55)
 
     # 1. Carica
     print(f"\n1/6 Caricamento CSV da {args.dataset_dir}/...")
@@ -306,17 +303,6 @@ def main():
     # 4. Normalizzazione
     print("\n6/6 Normalizzazione e salvataggio scaler...")
     normalize_and_save(df)
-
-    # 5. Salvataggio Resoconto
-    report = {
-        "righe_totali": len(df),
-        "feature_usate": FEATURE_COLS,
-        "medie_target": df[TARGET_COLS].mean().to_dict(),
-        "std_target": df[TARGET_COLS].std().to_dict()
-    }
-    report_path = os.path.join(BASE_DIR, "reports", "report_step1.json")
-    with open(report_path, "w") as f:
-        json.dump(report, f, indent=4)
 
     print(f"\n1°STEP COMPLETATO | Features: {len(FEATURE_COLS)}")
 
