@@ -153,34 +153,12 @@ def balance_data(df: pd.DataFrame) -> pd.DataFrame:
     max_straight = int(n_curve * 1.5)
     if n_straight > max_straight:
         df_straight = df_straight.sample(n=max_straight, random_state=42)
-        print(f"  Rettilinei sottocampionati da {n_straight} a {max_straight}.")
         
     df_balanced = pd.concat([df_straight, df_curve]).sample(frac=1.0, random_state=42).reset_index(drop=True)
-    
-    print(f"  Righe finali nel dataset bilanciato: {len(df_balanced)} (da {n_start} iniziali)")
     return df_balanced
 
 
-# ─────────────────────────────────────────────
-# 3. STATISTICHE DESCRITTIVE
-# ─────────────────────────────────────────────
-def print_stats(df: pd.DataFrame):
-    print("\n── Statistiche target ────────────────────────────────")
-    print(df[TARGET_COLS].describe().round(4).to_string())
 
-    print("\n── Statistiche feature principali ────────────────────")
-    print(df[["angle", "trackPos", "speedX", "rpm"]].describe().round(2).to_string())
-
-    # Distribuzione marce (informativa, non usata come target)
-    print("\n── Distribuzione marce registrate ────────────────────")
-    if "target_gear" in df.columns:
-        print(df["target_gear"].value_counts().sort_index().to_string())
-
-    # Percentuale frame con frenata > 0
-    brake_pct = (df["target_brake"] > 0.05).mean() * 100
-    steer_straight_pct = (df["target_steer"].abs() < 0.05).mean() * 100
-    print(f"\n  Frame con frenata attiva  : {brake_pct:.1f}%")
-    print(f"  Frame in rettilineo (|steer|<0.05): {steer_straight_pct:.1f}%")
 
 
 # ─────────────────────────────────────────────
@@ -281,10 +259,7 @@ def normalize_and_save(df: pd.DataFrame):
         pickle.dump(FEATURE_COLS, f)
     print(f"  Feature names salvate: {feature_path}")
 
-    # Riporta statistiche scaler
-    print("\n── Medie e std delle feature (per verifica) ──────────")
-    for name, mean, std in zip(FEATURE_COLS, scaler.mean_, scaler.scale_):
-        print(f"  {name:<14}: mean={mean:>8.3f}  std={std:>8.3f}")
+
 
     return scaler
 
@@ -302,9 +277,9 @@ def main():
     print("=" * 55)
 
     # 1. Carica
-    print(f"\n[1/5] Caricamento CSV da {args.dataset_dir}/...")
+    print(f"\n[1/6] Caricamento CSV da {args.dataset_dir}/...")
     df_raw = load_all_laps(args.dataset_dir)
-    print("\n[1.5/5] Elaborazione di tutti i file CSV caricati (Golden Laps disattivato).")
+    print("\n[2/6] Elaborazione di tutti i file CSV caricati.")
 
     # Salva merged grezzo
     merged_path = os.path.join(MODELS_DIR, "dataset_merged.csv")
@@ -312,31 +287,27 @@ def main():
     print(f"  Dataset grezzo salvato: {merged_path}")
 
     # 2. Pulisci
-    print("\n[2/5] Pulizia dati...")
+    print("\n[3/6] Pulizia dati...")
     df = clean_data(df_raw)
 
-    print("\n[2.5/5] Bilanciamento...")
+    print("\n[4/6] Bilanciamento...")
     df = balance_data(df)
 
     clean_path = os.path.join(MODELS_DIR, "dataset_clean.csv")
     df.to_csv(clean_path, index=False)
     print(f"  Dataset pulito e bilanciato salvato: {clean_path}")
 
-    # 3. Statistiche
-    print("\n[3/5] Statistiche descrittive...")
-    print_stats(df)
-
-    # 4. Plot
-    print("\n[4/5] Generazione grafici EDA...")
+    # 3. Plot
+    print("\n[5/6] Generazione grafici EDA...")
     plot_distributions(df)
     plot_correlations(df)
     plot_track_positions(df)
 
-    # 5. Normalizzazione
-    print("\n[5/5] Normalizzazione e salvataggio scaler...")
+    # 4. Normalizzazione
+    print("\n[6/6] Normalizzazione e salvataggio scaler...")
     normalize_and_save(df)
 
-    # 6. Salvataggio Resoconto
+    # 5. Salvataggio Resoconto
     report = {
         "righe_totali": len(df),
         "feature_usate": FEATURE_COLS,
@@ -346,13 +317,9 @@ def main():
     report_path = os.path.join(BASE_DIR, "reports", "report_step1.json")
     with open(report_path, "w") as f:
         json.dump(report, f, indent=4)
-    print(f"\n  Resoconto salvato in: {report_path}")
 
-    print("\n" + "=" * 55)
-    print(f"  ✓ STEP 1 COMPLETATO")
-    print(f"  Dataset pronto: {len(df)} campioni, {len(FEATURE_COLS)} feature")
-    print(f"  Prossimo: python step2_train_knn.py")
-    print("=" * 55)
+    print("\n1 step completato")
+    print(f"Features: {len(FEATURE_COLS)}")
 
 
 if __name__ == "__main__":
