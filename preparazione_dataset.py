@@ -59,7 +59,7 @@ def load_all_laps(folder: str) -> pd.DataFrame:
     if not files:
         raise FileNotFoundError(
             f"Nessun file *.csv trovato in: {folder}\n"
-            "Guida prima manualmente l'auto avviando manual_control_keyboard.py."
+            "Guida prima manualmente l'auto avviando controllo_manuale_tastiera.py o controllo_manuale_dualshockPS4.py."
         )
 
     frames = []
