@@ -230,10 +230,10 @@ def main():
             R.d['gear'] = gear
             R.d['meta'] = 0
 
-            # Stampa feedback ogni secondo di simulazione
+            # Stampa feedback ad alta frequenza (ogni 0.2s) per monitorare gli input in tempo reale
             cur_time = S.d.get('curLapTime', 0.0)
-            if int(cur_time) % 5 == 0 and cur_time - int(cur_time) < 0.05:
-                print(f"\rGuida Autonoma... Velocità: {int(speed_x)} km/h | Sterzo: {steer:5.2f} | Gas: {accel:4.2f} | Freno: {brake:4.2f}", end="")
+            if int(cur_time * 10) % 2 == 0:
+                print(f"\r[INFO] Vel: {speed_x:5.1f} km/h | Gear: {gear} | Steer: {steer:5.2f} | Gas: {accel:4.2f} | Freno: {brake:4.2f} | Assistant: {'SI' if speed_x < 50.0 else 'NO'}   ", end="", flush=True)
 
             so.sendto(str(R).encode(), (HOST, PORT))
 
