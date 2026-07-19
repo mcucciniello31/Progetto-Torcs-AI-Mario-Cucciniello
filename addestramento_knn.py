@@ -123,13 +123,24 @@ def evaluate(model: KNeighborsRegressor, X_test, y_test) -> dict:
     y_pred = model.predict(X_test)
     results = {}
 
+    target_names_mapping = {
+        "target_steer": "target_sterzata",
+        "target_accel": "target_accelerazione",
+        "target_brake": "target_frenata"
+    }
+
     for i, col in enumerate(TARGET_COLS):
         mae  = mean_absolute_error(y_test[:, i], y_pred[:, i])
         rmse = np.sqrt(mean_squared_error(y_test[:, i], y_pred[:, i]))
         r2   = r2_score(y_test[:, i], y_pred[:, i])
         results[col] = {"mae": mae, "rmse": rmse, "r2": r2,
                         "y_true": y_test[:, i], "y_pred": y_pred[:, i]}
-        print(f"  {col}: MAE (Errore Assoluto Medio) = {mae:.4f} | RMSE (Radice dell'Errore Quadratico Medio) = {rmse:.4f} | R² (Coefficiente di Determinazione) = {r2:.4f}")
+        
+        printed_name = target_names_mapping.get(col, col)
+        print(f"  {printed_name}:")
+        print(f"    MAE (Errore Assoluto Medio) = {mae:.4f}")
+        print(f"    RMSE (Radice dell'Errore Quadratico Medio) = {rmse:.4f}")
+        print(f"    R² (Coefficiente di Determinazione) = {r2:.4f}")
 
     return results
 
