@@ -194,12 +194,13 @@ def main():
             angle = S.d.get('angle', 0.0)
 
             # 1. LOGICA DI PARTENZA / BASSA VELOCITÀ (Evita stalli alla partenza o testacoda)
+            # 1. LOGICA DI PARTENZA / BASSA VELOCITÀ (Evita stalli alla partenza o testacoda)
             if speed_x < 25.0:
                 print(f"\r[PARTENZA/STALLO] Assistente attivo... Velocità: {speed_x:.1f} km/h", end="")
                 accel = 1.0
                 brake = 0.0
-                # Sterzo euristico per allinearsi al tracciato
-                steer = (angle * 30.0 / np.pi) - (track_pos * 0.20)
+                # Sterzo euristico morbido per allinearsi al tracciato
+                steer = (angle * 10.0 / np.pi) - (track_pos * 0.15)
                 steer = max(-1.0, min(1.0, steer))
             # 2. LOGICA DI RECOVERY (Se l'auto esce fuori pista, il KNN fallisce)
             elif abs(track_pos) > TRACK_LIMIT:
@@ -213,9 +214,10 @@ def main():
                 # 3. GUIDA AUTONOMA KNN
                 steer, accel, brake = agent.act(S.d)
                 
-                # Applica una correzione di sicurezza se lo sterzo del KNN è instabile sul dritto
-                if abs(track_pos) < 0.1 and abs(angle) < 0.02:
-                    steer = 0.0  # mantieni dritto
+                # Aggiunge una forza di centramento proporzionale (risolve l'assenza di dati di recovery)
+                # Questo evita che l'auto oscilli vistosamente o deragli lateralmente
+                steer -= track_pos * 0.12
+                steer = max(-1.0, min(1.0, steer))
 
                 # 4. LOGICA IBRIDA VELOCITÀ (Risolve la confusione causale del KNN a bassa/media velocità)
                 # Se la strada davanti è libera per più di 45 metri e non stiamo sterzando forte, accelera al massimo
