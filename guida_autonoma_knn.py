@@ -166,6 +166,7 @@ def main():
 
     S = ServerState()
     R = DriverAction()
+    prev_steer = 0.0
 
     print("\nConnessione a TORCS in corso... (Avvia la corsa Practice/Race su TORCS)")
 
@@ -229,6 +230,10 @@ def main():
                 if speed_x > speed:
                     gear = i + 1
             gear = min(gear, 6)
+
+            # Applica un filtro passa-basso allo sterzo per eliminare il zigzag e le oscillazioni repentine
+            steer = prev_steer * 0.75 + steer * 0.25
+            prev_steer = steer
 
             # Invia comandi a TORCS
             R.d['steer'] = steer
