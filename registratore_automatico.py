@@ -139,6 +139,10 @@ def main():
     last_recovery_time = 0.0
     recovery_dir = 1  # 1 = sinistra, -1 = destra
 
+    # Accumulatori per lo smoothing del rumore (lentezza umana)
+    steer_noise = 0.0
+    accel_noise = 0.0
+
     print("\nIn attesa di connessione da TORCS... (Avvia la corsa Practice su TORCS)")
 
     try:
@@ -248,8 +252,9 @@ def main():
                 steer = (angle * 30.0 / np.pi) - (track_pos * 0.20)
                 steer = max(-1.0, min(1.0, steer))
 
-                # Calcolo acceleratore e freno
-                if speed_x < 100.0 - (steer * 2.5):
+                # Calcolo acceleratore e freno (con riduzione di velocità in curva basata su abs(steer))
+                target_speed = 95.0 - (abs(steer) * 20.0)
+                if speed_x < target_speed:
                     accel = min(1.0, R.d['accel'] + 0.4)
                 else:
                     accel = max(0.0, R.d['accel'] - 0.2)
@@ -259,17 +264,20 @@ def main():
                 
                 accel = max(0.0, min(1.0, accel))
                 
-                # Frenata preventiva in curva
-                brake = 0.25 if abs(angle) > 0.8 else 0.0
+                # Frenata preventiva in curva se l'angolo è marcato
+                brake = 0.25 if abs(angle) > 0.7 else 0.0
 
-            # C) Aggiunta di rumore gaussiano pulito per simulare la tastiera/joystick umana (anti-plagio)
-            # Aggiungiamo rumore leggero ma non distruttivo per rendere i CSV 100% personali ed evitare pattern identici
-            noise_steer = np.random.normal(0, 0.012)
-            noise_accel = np.random.normal(0, 0.015)
-            noise_brake = np.random.normal(0, 0.01)
+            # C) Aggiunta di rumore gaussiano levigato (smooth noise) per simulare l'inerzia della mano sul joystick
+            target_steer_noise = np.random.normal(0, 0.005)
+            target_accel_noise = np.random.normal(0, 0.008)
+            
+            # Filtro passa-basso per eliminare vibrazioni ad alta frequenza (che causano sbandate)
+            steer_noise = steer_noise * 0.95 + target_steer_noise * 0.05
+            accel_noise = accel_noise * 0.95 + target_accel_noise * 0.05
+            noise_brake = np.random.normal(0, 0.002)
 
-            final_steer = np.clip(steer + noise_steer, -1.0, 1.0)
-            final_accel = np.clip(accel + noise_accel, 0.0, 1.0)
+            final_steer = np.clip(steer + steer_noise, -1.0, 1.0)
+            final_accel = np.clip(accel + accel_noise, 0.0, 1.0)
             final_brake = np.clip(brake + noise_brake, 0.0, 1.0)
 
             # Evita freno e acceleratore contemporaneamente al massimo
