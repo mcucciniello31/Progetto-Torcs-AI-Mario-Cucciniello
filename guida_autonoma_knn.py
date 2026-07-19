@@ -193,7 +193,7 @@ def main():
             angle = S.d.get('angle', 0.0)
 
             # 1. LOGICA DI PARTENZA / BASSA VELOCITÀ (Evita stalli alla partenza o testacoda)
-            if speed_x < 15.0:
+            if speed_x < 50.0:
                 print(f"\r[PARTENZA/STALLO] Assistente attivo... Velocità: {speed_x:.1f} km/h", end="")
                 accel = 1.0
                 brake = 0.0
