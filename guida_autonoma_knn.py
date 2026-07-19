@@ -192,8 +192,16 @@ def main():
             track_pos = S.d.get('trackPos', 0.0)
             angle = S.d.get('angle', 0.0)
 
-            # 1. LOGICA DI RECOVERY (Se l'auto esce fuori pista, il KNN fallisce)
-            if abs(track_pos) > TRACK_LIMIT:
+            # 1. LOGICA DI PARTENZA / BASSA VELOCITÀ (Evita stalli alla partenza o testacoda)
+            if speed_x < 15.0:
+                print(f"\r[PARTENZA/STALLO] Assistente attivo... Velocità: {speed_x:.1f} km/h", end="")
+                accel = 1.0
+                brake = 0.0
+                # Sterzo euristico per allinearsi al tracciato
+                steer = (angle * 30.0 / np.pi) - (track_pos * 0.20)
+                steer = max(-1.0, min(1.0, steer))
+            # 2. LOGICA DI RECOVERY (Se l'auto esce fuori pista, il KNN fallisce)
+            elif abs(track_pos) > TRACK_LIMIT:
                 # Comportamento di emergenza deterministico per rientrare
                 print(f"\r[EMERGENZA/RECOVERY] Auto fuori pista (trackPos: {track_pos:.2f}). Rientro automatico...", end="")
                 # Sterza forte verso il centro
@@ -201,7 +209,7 @@ def main():
                 accel = 0.25
                 brake = 0.0
             else:
-                # 2. GUIDA AUTONOMA KNN
+                # 3. GUIDA AUTONOMA KNN
                 steer, accel, brake = agent.act(S.d)
                 
                 # Applica una correzione di sicurezza se lo sterzo del KNN è instabile sul dritto
