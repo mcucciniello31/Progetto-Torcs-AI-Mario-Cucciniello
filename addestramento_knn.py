@@ -1,9 +1,9 @@
-#!/usr/bin/env python3
 """
-AI-AutonomeGuide - addestramento_knn.py
-======================================
-Legge il dataset pulito e addestra un KNeighborsRegressor multi-output per predire
-steer, accel e brake a partire dai sensori di bordo.
+STEP 2 - Training e Valutazione del Modello KNN
+================================================
+Legge il dataset pulito prodotto da step1_prepare_data.py,
+addestra un KNeighborsRegressor separato per steer/accel/brake
+(o multi-output), valuta le performance e salva il modello.
 
 Dipende da:
   - models/dataset_clean.csv
@@ -11,155 +11,333 @@ Dipende da:
   - models/feature_names.pkl
 
 Output generati:
-  - models/knn_model.pkl           -> modello KNN addestrato
-  - plots/train_predictions.png    -> scatter predizione vs valore reale
-  - plots/train_residuals.png      -> istogramma degli errori di predizione (residui)
+  - models/knn_model.pkl           → modello KNN addestrato
+  - plots/train_predictions.png    → scatter pred vs reale
+  - plots/train_residuals.png      → residui per target
+
+Uso:
+  python step2_train_knn.py
+  python step2_train_knn.py --k 10          # scegli k manualmente
+  python step2_train_knn.py --eval-only     # rivaluta modello esistente
 """
 
 import os
 import sys
 import pickle
 import argparse
+import json
+
+# Forza stdout UTF-8 su Windows
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 import numpy as np
 import pandas as pd
 import matplotlib
-matplotlib.use("Agg")  # Backend non interattivo per macOS
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from sklearn.neighbors import KNeighborsRegressor
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score, GroupShuffleSplit, GroupKFold
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-# --- CONFIGURAZIONE ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# ─────────────────────────────────────────────
+# CONFIGURAZIONE
+# ─────────────────────────────────────────────
+BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, "models")
-PLOTS_DIR = os.path.join(BASE_DIR, "plots")
+PLOTS_DIR  = os.path.join(BASE_DIR, "plots")
 
 TARGET_COLS = ["target_steer", "target_accel", "target_brake"]
+TARGET_RANGES = {
+    "target_steer": (-1.0,  1.0),
+    "target_accel": ( 0.0,  1.0),
+    "target_brake": ( 0.0,  1.0),
+}
 
-def load_data():
-    """Carica il dataset, lo scaler e l'elenco delle feature."""
-    clean_path = os.path.join(MODELS_DIR, "dataset_clean.csv")
-    scaler_path = os.path.join(MODELS_DIR, "scaler.pkl")
+# Iperparametri default
+DEFAULT_K         = 3            # numero vicini (ottimale da CV su questi dati)
+DEFAULT_WEIGHTS   = "distance"   # "uniform" oppure "distance"
+DEFAULT_ALGO      = "ball_tree"  # piu' veloce di "brute" su dataset medi
+DEFAULT_METRIC    = "euclidean"
+TEST_SIZE         = 0.20         # 20% per test
+RANDOM_STATE      = 42
+
+# ─────────────────────────────────────────────
+# UTILITÀ
+# ─────────────────────────────────────────────
+def load_artifacts(dataset_filename="dataset_clean.csv"):
+    """Carica dataset pulito, scaler e lista feature."""
+    clean_path   = os.path.join(MODELS_DIR, dataset_filename)
+    scaler_path  = os.path.join(MODELS_DIR, "scaler.pkl")
     feature_path = os.path.join(MODELS_DIR, "feature_names.pkl")
 
-    for path in [clean_path, scaler_path, feature_path]:
-        if not os.path.exists(path):
+    for p in [clean_path, scaler_path, feature_path]:
+        if not os.path.exists(p):
             raise FileNotFoundError(
-                f"File non trovato: {path}\n"
-                "Assicurati di aver eseguito preparazione_dataset.py."
+                f"File non trovato: {p}\n"
+                "Assicurati di aver generato il dataset corrispondente."
             )
 
     df = pd.read_csv(clean_path)
-    with open(scaler_path, "rb") as f:
-        scaler = pickle.load(f)
-    with open(feature_path, "rb") as f:
-        features = pickle.load(f)
+    with open(scaler_path,  "rb") as f: scaler  = pickle.load(f)
+    with open(feature_path, "rb") as f: features = pickle.load(f)
 
+    print(f"  Dataset: {len(df)} righe, {len(features)} feature")
     return df, scaler, features
 
-def plot_evaluation(y_test, y_pred):
-    """Genera i grafici di valutazione e li salva in plots/."""
-    # 1. Scatter Plot: Valore Reale vs Predetto
-    plt.figure(figsize=(18, 5))
-    names = ["Sterzo (Steer)", "Acceleratore (Accel)", "Freno (Brake)"]
-    
-    for i in range(3):
-        plt.subplot(1, 3, i+1)
-        plt.scatter(y_test[:, i], y_pred[:, i], alpha=0.3, color="teal", edgecolors="none")
-        # Linea di predizione perfetta (x = y)
-        min_val = min(y_test[:, i].min(), y_pred[:, i].min())
-        max_val = max(y_test[:, i].max(), y_pred[:, i].max())
-        plt.plot([min_val, max_val], [min_val, max_val], color="red", linestyle="--", lw=2)
-        plt.title(f"{names[i]}: Reale vs Predetto")
-        plt.xlabel("Valore Reale (Pilota)")
-        plt.ylabel("Valore Predetto (KNN)")
-        
-    plt.tight_layout()
-    plt.savefig(os.path.join(PLOTS_DIR, "train_predictions.png"))
-    plt.close()
 
-    # 2. Istogrammi dei Residui (errori)
-    plt.figure(figsize=(18, 5))
-    residuals = y_test - y_pred
-    
-    for i in range(3):
-        plt.subplot(1, 3, i+1)
-        plt.hist(residuals[:, i], bins=30, color="crimson", alpha=0.7, edgecolor="black")
-        plt.axvline(0, color="black", linestyle="--", lw=1.5)
-        plt.title(f"Residui di {names[i]}")
-        plt.xlabel("Errore (Reale - Predetto)")
-        plt.ylabel("Frequenza")
-        
-    plt.tight_layout()
-    plt.savefig(os.path.join(PLOTS_DIR, "train_residuals.png"))
-    plt.close()
-    print(f"Grafici di valutazione salvati in: {PLOTS_DIR}")
+def prepare_xy(df: pd.DataFrame, features: list, scaler):
+    """Estrae X (normalizzato) e y (raw) dal DataFrame."""
+    X_raw = df[features].values
+    y     = df[TARGET_COLS].values
+    X     = scaler.transform(X_raw)
+    groups = df["_source_file"].values if "_source_file" in df.columns else None
+    return X, y, groups
 
+
+# ─────────────────────────────────────────────
+# RICERCA AUTOMATICA DI K (opzionale)
+# ─────────────────────────────────────────────
+def find_best_k(X_train, y_train, groups_train=None, k_range=range(3, 15, 2)):
+    """
+    Valuta vari valori di k tramite cross-validation (3-fold)
+    sul solo sterzo (il target più critico) e restituisce il migliore.
+    Se sono disponibili i gruppi (source_file), usa GroupKFold.
+    """
+    print("  Ricerca del k ottimale via 3-fold CV (steer)...")
+    best_k, best_score = DEFAULT_K, -np.inf
+
+    for k in k_range:
+        model = KNeighborsRegressor(
+            n_neighbors=k,
+            weights=DEFAULT_WEIGHTS,
+            algorithm=DEFAULT_ALGO,
+            metric=DEFAULT_METRIC,
+            n_jobs=-1
+        )
+        
+        cv_strategy = GroupKFold(n_splits=3) if groups_train is not None else 3
+        
+        scores = cross_val_score(model, X_train, y_train[:, 0], 
+                                 groups=groups_train, cv=cv_strategy, 
+                                 scoring="r2", n_jobs=-1)
+        mean_r2 = scores.mean()
+        print(f"    k={k:>2}  R²_steer={mean_r2:.4f}")
+        if mean_r2 > best_score:
+            best_score = mean_r2
+            best_k = k
+
+    print(f"  → k ottimale selezionato: {best_k}  (R²={best_score:.4f})")
+    return best_k
+
+
+# ─────────────────────────────────────────────
+# TRAINING
+# ─────────────────────────────────────────────
+def train(X_train, y_train, k: int) -> KNeighborsRegressor:
+    """Addestra un KNN multi-output sui dati puri senza compressione."""
+    model = KNeighborsRegressor(
+        n_neighbors=k,
+        weights=DEFAULT_WEIGHTS,
+        algorithm=DEFAULT_ALGO,
+        metric=DEFAULT_METRIC,
+        n_jobs=1   # n_jobs=1 e' piu' veloce per query singole su Windows
+    )
+    model.fit(X_train, y_train)
+    return model
+
+
+# ─────────────────────────────────────────────
+# VALUTAZIONE
+# ─────────────────────────────────────────────
+def evaluate(model: KNeighborsRegressor, X_test, y_test) -> dict:
+    """Calcola metriche per ogni target."""
+    y_pred = model.predict(X_test)
+    results = {}
+
+    print("\n── Risultati sul Test Set (80/20 split) ──────────────")
+    print(f"  {'Target':<18} {'MAE':>8} {'RMSE':>8} {'R²':>8}")
+    print("  " + "─" * 44)
+
+    for i, col in enumerate(TARGET_COLS):
+        mae  = mean_absolute_error(y_test[:, i], y_pred[:, i])
+        rmse = np.sqrt(mean_squared_error(y_test[:, i], y_pred[:, i]))
+        r2   = r2_score(y_test[:, i], y_pred[:, i])
+        results[col] = {"mae": mae, "rmse": rmse, "r2": r2,
+                        "y_true": y_test[:, i], "y_pred": y_pred[:, i]}
+        print(f"  {col:<18} {mae:>8.4f} {rmse:>8.4f} {r2:>8.4f}")
+
+    return results
+
+
+# ─────────────────────────────────────────────
+# PLOT RISULTATI
+# ─────────────────────────────────────────────
+def plot_predictions(results: dict):
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+    fig.suptitle("KNN – Previsione vs Reale (Test Set)", fontsize=13, fontweight="bold")
+
+    colors = ["#3b82f6", "#22c55e", "#ef4444"]
+
+    for ax, (col, res), color in zip(axes, results.items(), colors):
+        lo, hi = TARGET_RANGES[col]
+        ax.scatter(res["y_true"], res["y_pred"],
+                   alpha=0.15, s=4, color=color, rasterized=True)
+        ax.plot([lo, hi], [lo, hi], "k--", linewidth=1, label="perfetto")
+        ax.set_xlim(lo, hi); ax.set_ylim(lo, hi)
+        ax.set_xlabel("Valore Reale")
+        ax.set_ylabel("Previsione KNN")
+        ax.set_title(f"{col}\nMAE={res['mae']:.4f}  R²={res['r2']:.4f}")
+        ax.legend(fontsize=8); ax.grid(alpha=0.3)
+
+    plt.tight_layout()
+    out = os.path.join(PLOTS_DIR, "train_predictions.png")
+    plt.savefig(out, dpi=120)
+    plt.close()
+    print(f"\n  Grafico salvato: {out}")
+
+
+def plot_residuals(results: dict):
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+    fig.suptitle("KNN – Distribuzione Residui (Test Set)", fontsize=13, fontweight="bold")
+
+    colors = ["#3b82f6", "#22c55e", "#ef4444"]
+
+    for ax, (col, res), color in zip(axes, results.items(), colors):
+        residuals = res["y_pred"] - res["y_true"]
+        ax.hist(residuals, bins=60, color=color, alpha=0.8, edgecolor="none")
+        ax.axvline(0, color="black", linewidth=1.2, linestyle="--")
+        ax.axvline(residuals.mean(), color="red", linewidth=1,
+                   linestyle=":", label=f"media={residuals.mean():.4f}")
+        ax.set_title(col)
+        ax.set_xlabel("Residuo (pred − reale)")
+        ax.set_ylabel("Frequenza")
+        ax.legend(fontsize=8); ax.grid(axis="y", alpha=0.3)
+
+    plt.tight_layout()
+    out = os.path.join(PLOTS_DIR, "train_residuals.png")
+    plt.savefig(out, dpi=120)
+    plt.close()
+    print(f"  Grafico salvato: {out}")
+
+
+# ─────────────────────────────────────────────
+# SALVATAGGIO MODELLO
+# ─────────────────────────────────────────────
+def save_model(model: KNeighborsRegressor):
+    model_path = os.path.join(MODELS_DIR, "knn_model.pkl")
+    with open(model_path, "wb") as f:
+        pickle.dump(model, f)
+    print(f"\n  Modello KNN salvato: {model_path}")
+
+
+def load_model() -> KNeighborsRegressor:
+    model_path = os.path.join(MODELS_DIR, "knn_model.pkl")
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Modello non trovato: {model_path}")
+    with open(model_path, "rb") as f:
+        return pickle.load(f)
+
+
+# ─────────────────────────────────────────────
+# MAIN
+# ─────────────────────────────────────────────
 def main():
-    parser = argparse.ArgumentParser(description="Addestra il modello KNN per la guida autonoma.")
-    parser.add_argument("--k", type=int, default=3, help="Numero di vicini per il KNN (default: 3)")
-    parser.add_argument("--weights", type=str, default="distance", choices=["uniform", "distance"], help="Ponderazione dei vicini (default: distance)")
+    parser = argparse.ArgumentParser(description="Training KNN per Imitation Learning su TORCS")
+    parser.add_argument("--k",         type=int,  default=None,  help="Numero vicini (default: auto)")
+    parser.add_argument("--find-k",    action="store_true",      help="Cerca k ottimale via CV")
+    parser.add_argument("--eval-only", action="store_true",      help="Rivaluta modello esistente senza ritraining")
+    parser.add_argument("--dataset",   type=str,  default="dataset_clean.csv", help="Nome file del dataset in models/ (default: dataset_clean.csv)")
     args = parser.parse_args()
 
-    try:
-        # Carica i dati
-        print("Caricamento dataset e scaler...")
-        df, scaler, features = load_data()
+    print("=" * 55)
+    print("  STEP 2 – Training KNN")
+    print("=" * 55)
 
-        # Estrai X (normalizzato) e y (valori reali delle azioni)
-        X = scaler.transform(df[features].values)
-        y = df[TARGET_COLS].values
+    # Carica dati
+    print(f"\n[1/4] Caricamento artefatti ({args.dataset}) da models/...")
+    df, scaler, features = load_artifacts(dataset_filename=args.dataset)
 
-        # Split in Train e Test set
+    # Prepara X, y
+    X, y, groups = prepare_xy(df, features, scaler)
+
+    # Split train/test
+    if groups is not None:
+        print("\n[!] Split per giri interi per prevenire Data Leakage (GroupShuffleSplit).")
+        gss = GroupShuffleSplit(n_splits=1, test_size=TEST_SIZE, random_state=RANDOM_STATE)
+        train_idx, test_idx = next(gss.split(X, y, groups=groups))
+        X_train, X_test = X[train_idx], X[test_idx]
+        y_train, y_test = y[train_idx], y[test_idx]
+        groups_train = groups[train_idx]
+    else:
+        print("\n[!] Colonna _source_file mancante, fallback su train_test_split casuale.")
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.20, random_state=42
+            X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE
         )
+        groups_train = None
+    print(f"  Train: {len(X_train)} campioni  |  Test: {len(X_test)} campioni")
 
-        print(f"\nAddestramento del regressore KNN con k={args.k} ({args.weights} weights)...")
-        # Inizializza e addestra il modello KNN (usando ball_tree per calcoli rapidi in real-time)
-        knn = KNeighborsRegressor(
-            n_neighbors=args.k,
-            weights=args.weights,
-            algorithm="ball_tree",
-            metric="euclidean"
-        )
-        knn.fit(X_train, y_train)
+    if args.eval_only:
+        # Solo valutazione su modello esistente
+        print("\n[!] Modalità --eval-only: carico modello esistente...")
+        model = load_model()
+    else:
+        # Determina k
+        if args.k:
+            k = args.k
+            print(f"\n[2/4] k={k} (specificato dall'utente)")
+        elif args.find_k:
+            print("\n[2/4] Ricerca automatica del k ottimale (con GroupKFold)...")
+            k = find_best_k(X_train, y_train, groups_train=groups_train)
+        else:
+            k = DEFAULT_K
+            print(f"\n[2/4] k={k} (default)")
 
-        # Valuta sul test set
-        print("Valutazione del modello sul test set...")
-        y_pred = knn.predict(X_test)
-        
-        # Limita i valori predetto ai range ammessi per sicurezza
-        y_pred[:, 0] = np.clip(y_pred[:, 0], -1.0, 1.0) # steer
-        y_pred[:, 1] = np.clip(y_pred[:, 1], 0.0, 1.0)  # accel
-        y_pred[:, 2] = np.clip(y_pred[:, 2], 0.0, 1.0)  # brake
+        # Training
+        print(f"\n[3/4] Training KNN (k={k}, weights={DEFAULT_WEIGHTS}, algo={DEFAULT_ALGO})...")
+        model = train(X_train, y_train, k)
+        print("  Training completato.")
 
-        # Calcola le metriche
-        for i, col in enumerate(TARGET_COLS):
-            r2 = r2_score(y_test[:, i], y_pred[:, i])
-            mae = mean_absolute_error(y_test[:, i], y_pred[:, i])
-            rmse = np.sqrt(mean_squared_error(y_test[:, i], y_pred[:, i]))
-            print(f"\nMetriche per {col}:")
-            print(f"  R2 Score : {r2:7.4f}")
-            print(f"  MAE      : {mae:7.4f}")
-            print(f"  RMSE     : {rmse:7.4f}")
+        # Salva modello
+        save_model(model)
 
-        # Genera i grafici di valutazione
-        plot_evaluation(y_test, y_pred)
+    # Valutazione
+    print("\n[4/4] Valutazione sul test set...")
+    results = evaluate(model, X_test, y_test)
 
-        # Salva il modello addestrato
-        model_output_path = os.path.join(MODELS_DIR, "knn_model.pkl")
-        with open(model_output_path, "wb") as f:
-            pickle.dump(knn, f)
+    # Grafici
+    print("\n  Generazione grafici...")
+    plot_predictions(results)
+    plot_residuals(results)
 
-        print("\n" + "="*50)
-        print(" ADDESTRAMENTO COMPLETATO CON SUCCESSO!")
-        print(f" Modello KNN salvato in: {model_output_path}")
-        print("="*50)
+    # Salvataggio Resoconto JSON
+    report = {
+        "k": k,
+        "results": {
+            col: {"mae": float(res["mae"]), "rmse": float(res["rmse"]), "r2": float(res["r2"])}
+            for col, res in results.items()
+        }
+    }
+    report_path = os.path.join(BASE_DIR, "reports", "report_step2.json")
+    with open(report_path, "w") as f:
+        json.dump(report, f, indent=4)
+    print(f"\n  Resoconto salvato in: {report_path}")
 
-    except Exception as e:
-        print(f"\nERRORE durante il training: {e}")
-        sys.exit(1)
+    # Stima latenza inferenza (importante per real-time)
+    import time
+    n_queries = 500
+    t0 = time.perf_counter()
+    for _ in range(n_queries):
+        model.predict(X_test[:1])
+    dt_ms = (time.perf_counter() - t0) / n_queries * 1000
+    print(f"\n  Latenza media inferenza: {dt_ms:.2f} ms/step")
+    print(f"  (TORCS step rate: ~20ms → {'✓ OK' if dt_ms < 10 else '⚠ LENTO, considera riduzione feature o k'})")
+
+    print("\n" + "=" * 55)
+    print(f"  ✓ STEP 2 COMPLETATO")
+    print(f"  Prossimo: python step3_knn_drive.py")
+    print("=" * 55)
+
 
 if __name__ == "__main__":
     main()
