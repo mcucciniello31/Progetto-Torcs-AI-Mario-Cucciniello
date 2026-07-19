@@ -193,7 +193,7 @@ def main():
             angle = S.d.get('angle', 0.0)
 
             # 1. LOGICA DI PARTENZA / BASSA VELOCITÀ (Evita stalli alla partenza o testacoda)
-            if speed_x < 50.0:
+            if speed_x < 25.0:
                 print(f"\r[PARTENZA/STALLO] Assistente attivo... Velocità: {speed_x:.1f} km/h", end="")
                 accel = 1.0
                 brake = 0.0
@@ -215,6 +215,13 @@ def main():
                 # Applica una correzione di sicurezza se lo sterzo del KNN è instabile sul dritto
                 if abs(track_pos) < 0.1 and abs(angle) < 0.02:
                     steer = 0.0  # mantieni dritto
+
+                # 4. LOGICA IBRIDA VELOCITÀ (Risolve la confusione causale del KNN a bassa/media velocità)
+                # Se la strada davanti è libera per più di 45 metri e non stiamo sterzando forte, accelera al massimo
+                track_sens = S.d.get('track', [0.0]*19)
+                if len(track_sens) == 19 and track_sens[9] > 45.0 and abs(steer) < 0.18:
+                    accel = 1.0
+                    brake = 0.0
 
             # 3. CAMBIO MARCIA AUTOMATICO (Molto più robusto del cambio appreso)
             gear = 1
