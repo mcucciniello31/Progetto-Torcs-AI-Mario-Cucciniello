@@ -97,7 +97,7 @@ def plot_evaluation(y_test, y_pred):
 
 def main():
     parser = argparse.ArgumentParser(description="Addestra il modello KNN per la guida autonoma.")
-    parser.add_argument("--k", type=int, default=15, help="Numero di vicini per il KNN (default: 15)")
+    parser.add_argument("--k", type=int, default=5, help="Numero di vicini per il KNN (default: 5)")
     parser.add_argument("--weights", type=str, default="distance", choices=["uniform", "distance"], help="Ponderazione dei vicini (default: distance)")
     args = parser.parse_args()
 
