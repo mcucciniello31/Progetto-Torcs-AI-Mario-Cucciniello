@@ -345,7 +345,7 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
     finally:
         so.close()
         if knn_cnt > 0:
-            print(f"\n── Riepilogo sessione ─────────────────────────────")
+            print(f"\nRiepilogo ")
             print(f"  Step totali : {knn_cnt}")
             print(f"  Controllo KNN      : {knn_cnt:>5}  (100.0%)")
 
