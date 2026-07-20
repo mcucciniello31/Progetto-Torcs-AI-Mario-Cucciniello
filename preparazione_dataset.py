@@ -181,7 +181,7 @@ def plot_distributions(df: pd.DataFrame):
         ax.grid(axis="y", alpha=0.3)
 
     plt.tight_layout()
-    out = os.path.join(PLOTS_DIR, "eda_distributions.png")
+    out = os.path.join(PLOTS_DIR, "eda_distribuzioni.png")
     plt.savefig(out, dpi=120)
     plt.close()
     print(f"  Salvato: {out}")
@@ -199,7 +199,7 @@ def plot_correlations(df: pd.DataFrame):
     )
     ax.set_title("Correlazioni tra Sensori e Azioni", fontsize=12, fontweight="bold")
     plt.tight_layout()
-    out = os.path.join(PLOTS_DIR, "eda_correlations.png")
+    out = os.path.join(PLOTS_DIR, "eda_correlazioni.png")
     plt.savefig(out, dpi=120)
     plt.close()
     print(f"  Salvato: {out}")
@@ -229,7 +229,7 @@ def plot_track_positions(df: pd.DataFrame):
     axes[1].grid(alpha=0.3)
 
     plt.tight_layout()
-    out = os.path.join(PLOTS_DIR, "eda_track_positions.png")
+    out = os.path.join(PLOTS_DIR, "eda_traiettorie.png")
     plt.savefig(out, dpi=120)
     plt.close()
     print(f"  Salvato: {out}")
