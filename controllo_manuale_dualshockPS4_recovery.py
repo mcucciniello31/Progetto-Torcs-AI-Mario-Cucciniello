@@ -251,12 +251,7 @@ def manual_recording():
             so.sendto(repr(R).encode(), (HOST, PORT))
 
     except KeyboardInterrupt: 
-        print("\nUscita volontaria...")
-        if len(lap_buffer) > 50:
-            lap_counter += 1
-            cur_time = S.d.get('curLapTime', 0)
-            save_to_disk(lap_buffer, headers, lap_counter, cur_time)
-            print(">>> Dati parziali salvati con successo prima della chiusura.")
+        print("\nUscita volontaria.")
     finally:
         so.close()
         pygame.quit()
