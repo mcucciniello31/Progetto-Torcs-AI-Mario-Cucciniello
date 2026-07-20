@@ -4,3 +4,4 @@ dataset_laps_generated_backup/
 __pycache__/
 .DS_Store
 scratch/
+models/*.csv
