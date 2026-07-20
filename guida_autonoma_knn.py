@@ -301,7 +301,8 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
 
             # Ripartizione e rilascio in curva per evitare testacoda (EBD) e taglio acceleratore in frenata
             if brake > 0.05:
-                accel = 0.0
+                if speed > 20.0:
+                    accel = 0.0
                 if abs(steer) >= 0.15:
                     brake = min(0.3, brake)  # limita il freno se stiamo sterzando
 
