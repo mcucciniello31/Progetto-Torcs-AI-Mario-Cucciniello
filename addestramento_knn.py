@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
 AI-AutonomeGuide - addestramento_knn.py
-======================================
-Legge il dataset pulito e addestra un KNeighborsRegressor multi-output per predire
-steer, accel e brake a partire dai sensori di bordo.
 
-Dipende da:
+Script che legge il dataset pulito e addestra un KNeighborsRegressor per predire
+sterzo (steer), acceleratore (accel) e freno (brake) a partire dai sensori dell'auto.
+
+Dipende dai file:
   - models/dataset_clean.csv
   - models/scaler.pkl
   - models/feature_names.pkl
 
-Output generati:
-  - models/knn_model.pkl           -> modello KNN addestrato
-  - plots/train_predictions.png    -> scatter predizione vs valore reale
-  - plots/train_residuals.png      -> istogramma degli errori di predizione (residui)
+E genera i seguenti elementi:
+  - models/knn_model.pkl           -> modello del KNN addestrato
+  - plots/train_predictions.png    -> scatter predizione / valore reale
+  - plots/train_residuals.png      -> istogramma degli errori di predizion
 """
 
 import os
@@ -22,8 +22,6 @@ import pickle
 import argparse
 import numpy as np
 import pandas as pd
-import matplotlib
-matplotlib.use("Agg")  # Backend non interattivo per macOS
 import matplotlib.pyplot as plt
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.model_selection import train_test_split
@@ -37,7 +35,7 @@ PLOTS_DIR = os.path.join(BASE_DIR, "plots")
 TARGET_COLS = ["target_steer", "target_accel", "target_brake"]
 
 def load_data():
-    """Carica il dataset, lo scaler e l'elenco delle feature."""
+    """Caricamento del dataset, dello scaler e delle feature."""
     clean_path = os.path.join(MODELS_DIR, "dataset_clean.csv")
     scaler_path = os.path.join(MODELS_DIR, "scaler.pkl")
     feature_path = os.path.join(MODELS_DIR, "feature_names.pkl")
@@ -46,7 +44,7 @@ def load_data():
         if not os.path.exists(path):
             raise FileNotFoundError(
                 f"File non trovato: {path}\n"
-                "Assicurati di aver eseguito preparazione_dataset.py."
+                "Assicurati di aver lanciato lo script preparazione_dataset.py."
             )
 
     df = pd.read_csv(clean_path)
@@ -58,27 +56,26 @@ def load_data():
     return df, scaler, features
 
 def plot_evaluation(y_test, y_pred):
-    """Genera i grafici di valutazione e li salva in plots/."""
-    # 1. Scatter Plot: Valore Reale vs Predetto
+    """Generazione dei grafici (e il relativo salvatggio nella cartella plots/."""
+    # Scatter: valore reale in comparazione col valore predetto
     plt.figure(figsize=(18, 5))
     names = ["Sterzo (Steer)", "Acceleratore (Accel)", "Freno (Brake)"]
     
     for i in range(3):
         plt.subplot(1, 3, i+1)
-        plt.scatter(y_test[:, i], y_pred[:, i], alpha=0.3, color="teal", edgecolors="none")
-        # Linea di predizione perfetta (x = y)
+        plt.scatter(y_test[:, i], y_pred[:, i], alpha=0.3, color="dodgerblue", edgecolors="none")
         min_val = min(y_test[:, i].min(), y_pred[:, i].min())
         max_val = max(y_test[:, i].max(), y_pred[:, i].max())
-        plt.plot([min_val, max_val], [min_val, max_val], color="red", linestyle="--", lw=2)
-        plt.title(f"{names[i]}: Reale vs Predetto")
-        plt.xlabel("Valore Reale (Pilota)")
+        plt.plot([min_val, max_val], [min_val, max_val], color="crimson", linestyle="--", lw=2)
+        plt.title(f"{names[i]}: Reale / Predetto")
+        plt.xlabel("Valore Reale (Manuale)")
         plt.ylabel("Valore Predetto (KNN)")
         
     plt.tight_layout()
     plt.savefig(os.path.join(PLOTS_DIR, "train_predictions.png"))
     plt.close()
 
-    # 2. Istogrammi dei Residui (errori)
+    # Istogrammi dei valori residui (cioè degli "errori")
     plt.figure(figsize=(18, 5))
     residuals = y_test - y_pred
     
@@ -87,17 +84,17 @@ def plot_evaluation(y_test, y_pred):
         plt.hist(residuals[:, i], bins=30, color="crimson", alpha=0.7, edgecolor="black")
         plt.axvline(0, color="black", linestyle="--", lw=1.5)
         plt.title(f"Residui di {names[i]}")
-        plt.xlabel("Errore (Reale - Predetto)")
+        plt.xlabel("Errore (Valore Reale - Valore Predetto)")
         plt.ylabel("Frequenza")
         
     plt.tight_layout()
     plt.savefig(os.path.join(PLOTS_DIR, "train_residuals.png"))
     plt.close()
-    print(f"Grafici di valutazione salvati in: {PLOTS_DIR}")
+    print(f"Grafici salvati in: {PLOTS_DIR}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Addestra il modello KNN per la guida autonoma.")
-    parser.add_argument("--k", type=int, default=3, help="Numero di vicini per il KNN (default: 3)")
+    parser = argparse.ArgumentParser(description="Addestramento del modello KNN per la guida autonoma.")
+    parser.add_argument("--k", type=int, default=3, help="Numero di vicini per il KNN (3)")
     parser.add_argument("--weights", type=str, default="distance", choices=["uniform", "distance"], help="Ponderazione dei vicini (default: distance)")
     args = parser.parse_args()
 
