@@ -307,10 +307,10 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
             is_emergency = False
             if abs(steer) < 0.06:
                 if speed > 165.0:
-                    if track_front < 80.0:
+                    if track_front < 75.0:
                         is_emergency = True
                 elif speed > 70.0:
-                    if track_front < 20.0:
+                    if track_front < 15.0:
                         is_emergency = True
 
             if is_emergency:
