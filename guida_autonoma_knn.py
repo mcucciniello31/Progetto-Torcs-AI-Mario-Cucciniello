@@ -1,54 +1,29 @@
 """
-STEP 3 - Agente KNN in TORCS (Behavior Cloning)
-================================================
-Carica il modello KNN addestrato e lo usa per guidare in TORCS
-in tempo reale via protocollo SCR (UDP).
+Agente KNN in TORCS (Behavior Cloning) - guida_autonoma_knn.py
 
-La struttura del loop è identica a torcs_jm_par_modulare.py,
-con la funzione di guida sostituita dall'inferenza KNN.
+Script che carica il modello KNN addestrato e lo utilizza per guidare in TORCS
+in tempo reale tramite protocollo SCR (UDP).
 
-La gestione del GEAR rimane automatica (logica rule-based):
-i dati di training non sono sufficientemente precisi per imparare
-le marce, mentre la logica automatica è già robusta.
-
-Dipende da:
+Dipende dai file:
   - models/knn_model.pkl
   - models/scaler.pkl
   - models/feature_names.pkl
-
-Uso:
-  1. Avvia TORCS con un circuito in modalità Practice/Race
-  2. python step3_knn_drive.py
-  
-  Opzioni:
-  --host localhost    → host TORCS (default: localhost)
-  --port 3001         → porta TORCS (default: 3001)
-  --steps 100000      → max step prima di fermarsi
-  --verbose           → stampa telemetria ad ogni step
 """
-
+#Configurazione
 import os
 import sys
 import socket
 import time
 import pickle
 import argparse
-
-# Forza stdout UTF-8 su Windows
-if sys.platform == "win32":
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-
 import numpy as np
 
-# ─────────────────────────────────────────────
-# CONFIGURAZIONE
-# ─────────────────────────────────────────────
 BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, "models")
 
 DATA_SIZE = 2 ** 17
 
-# Feature di input – DEVE corrispondere a step1_prepare_data.py
+# Feature di input che deve corrispondere a preparazione_dataset.py
 FEATURE_COLS = [
     "angle",
     "trackPos",
@@ -60,8 +35,7 @@ FEATURE_COLS = [
     "track_10", "track_11", "track_12", "track_13", "track_14",
     "track_15", "track_16", "track_17", "track_18",
 ]
-
-# Soglie per marce automatiche (km/h) – stessa logica del bot originale
+#Dato che anche qui le marce restano automatiche, definiamo la logica di cambio
 GEAR_SPEEDS = [0, 45, 90, 145, 200, 250]
 
 # Soglia fuori pista per eventuale fallback
