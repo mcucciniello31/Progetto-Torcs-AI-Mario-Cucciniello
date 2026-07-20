@@ -3,3 +3,4 @@ dataset_laps_generated_backup/
 *.log
 __pycache__/
 .DS_Store
+scratch/
