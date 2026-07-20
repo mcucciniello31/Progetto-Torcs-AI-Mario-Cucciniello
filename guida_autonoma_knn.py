@@ -302,11 +302,11 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
             # --- AMPLIFICAZIONE FRENO KNN ---
             # Contrasta lo smoothing spaziale del KNN. Attiva solo sopra i 25 km/h per evitare stalli.
             if brake > 0.02 and speed > 25.0:
-                brake = min(1.0, brake * 2.25)
+                brake = min(1.0, brake * 2.8)
 
             # --- RILASCIO FRENI A BASSA VELOCITÀ ---
             # Se stiamo accelerando e andiamo piano, togliamo i freni per evitare conflitti gas/freno
-            if speed < 15.0 and accel > 0.1:
+            if speed < 18.0 and accel > 0.1:
                 brake = 0.0
 
             # --- MUTUA ESCLUSIONE PEDALI (anti-burnout) ---
