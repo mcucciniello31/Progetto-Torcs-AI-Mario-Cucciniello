@@ -95,25 +95,32 @@ def plot_evaluation(y_test, y_pred):
 def main():
     parser = argparse.ArgumentParser(description="Addestramento del modello KNN per la guida autonoma.")
     parser.add_argument("--k", type=int, default=3, help="Numero di vicini per il KNN (3)")
-    parser.add_argument("--weights", type=str, default="distance", choices=["uniform", "distance"], help="Ponderazione dei vicini (default: distance)")
+    parser.add_argument("--weights", type=str, default="distance", choices=["uniform", "distance"], help="'Peso'dei vicini (distanza)")
     args = parser.parse_args()
 
     try:
-        # Carica i dati
+        # Caricamento dei dati ed estrazione dei valori normalizzati e dei valori reali
         print("Caricamento dataset e scaler...")
         df, scaler, features = load_data()
-
-        # Estrai X (normalizzato) e y (valori reali delle azioni)
         X = scaler.transform(df[features].values)
         y = df[TARGET_COLS].values
 
-        # Split in Train e Test set
+        # Divisione delle "percentuali" --> 20% per il testing, 80% per il training
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.20, random_state=42
         )
 
-        print(f"\nAddestramento del regressore KNN con k={args.k} ({args.weights} weights)...")
-        # Inizializza e addestra il modello KNN (usando ball_tree per calcoli rapidi in real-time)
+        print(f"\nAddestramento del modello KNN con k={args.k} ({args.weights} weights)...")
+        # Addestramento del modello KNN (usando ball_tree: 
+        #organizza i punti del dataset di addestramento in 
+        #una serie di "sfere" nidificate --> quando lo script 
+        #chiede una predizione al modello, l'algoritmo naviga
+        #l'albero scendendo attraverso queste sfere. Se la distanza 
+        #tra l'auto e il confine di una sfera è maggiore della distanza 
+        #dal vicino più "vicino" già trovato, l'algoritmo scarta 
+        #tutti i punti dentro quella sfera senza calcolarne le singole distanze.
+        #Preferito a kd_tree e a brute x efficienza e x la grandezza del dataset
+
         knn = KNeighborsRegressor(
             n_neighbors=args.k,
             weights=args.weights,
@@ -122,40 +129,36 @@ def main():
         )
         knn.fit(X_train, y_train)
 
-        # Valuta sul test set
-        print("Valutazione del modello sul test set...")
+        # Valutazione test set e limitazione dei 3 valori nel range definito 
+        print("Valutazione del modello KNN sul test set...")
         y_pred = knn.predict(X_test)
         
-        # Limita i valori predetto ai range ammessi per sicurezza
-        y_pred[:, 0] = np.clip(y_pred[:, 0], -1.0, 1.0) # steer
-        y_pred[:, 1] = np.clip(y_pred[:, 1], 0.0, 1.0)  # accel
-        y_pred[:, 2] = np.clip(y_pred[:, 2], 0.0, 1.0)  # brake
+        y_pred[:, 0] = np.clip(y_pred[:, 0], -1.0, 1.0) # steer -> sterzo
+        y_pred[:, 1] = np.clip(y_pred[:, 1], 0.0, 1.0)  # accel -> acceleratore
+        y_pred[:, 2] = np.clip(y_pred[:, 2], 0.0, 1.0)  # brake -> freno
 
-        # Calcola le metriche
+        # Calcolo dei parametri
         for i, col in enumerate(TARGET_COLS):
             r2 = r2_score(y_test[:, i], y_pred[:, i])
             mae = mean_absolute_error(y_test[:, i], y_pred[:, i])
             rmse = np.sqrt(mean_squared_error(y_test[:, i], y_pred[:, i]))
             print(f"\nMetriche per {col}:")
-            print(f"  R2 Score : {r2:7.4f}")
-            print(f"  MAE      : {mae:7.4f}")
-            print(f"  RMSE     : {rmse:7.4f}")
+            print(f"  R2 Score : {r2:7.3f}")
+            print(f"  MAE      : {mae:7.3f}")
+            print(f"  RMSE     : {rmse:7.3f}")
 
-        # Genera i grafici di valutazione
+        # Grafici di valutazione e salvataggio del modello KNN addestrato
         plot_evaluation(y_test, y_pred)
 
-        # Salva il modello addestrato
         model_output_path = os.path.join(MODELS_DIR, "knn_model.pkl")
         with open(model_output_path, "wb") as f:
             pickle.dump(knn, f)
 
-        print("\n" + "="*50)
-        print(" ADDESTRAMENTO COMPLETATO CON SUCCESSO!")
+        print(" Addestramento completato!")
         print(f" Modello KNN salvato in: {model_output_path}")
-        print("="*50)
 
     except Exception as e:
-        print(f"\nERRORE durante il training: {e}")
+        print(f"\nErrore: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
