@@ -148,13 +148,19 @@ class KNNAgent:
         with open(scaler_path,  "rb") as f: self.scaler   = pickle.load(f)
         with open(feature_path, "rb") as f: self.features = pickle.load(f)
 
-        print(f"  Modello KNN caricato ({self.model.n_neighbors} vicini)")
+        # Rileva ed evita crash all'avvio a seconda del modello caricato su disco
+        if hasattr(self.model, "n_neighbors"):
+            print(f"  Modello KNN caricato ({self.model.n_neighbors} vicini)")
+        elif hasattr(self.model, "estimators_"):
+            print(f"  Modello Random Forest caricato ({len(self.model.estimators_)} alberi)")
+        else:
+            print(f"  Modello caricato: {type(self.model).__name__}")
         print(f"  Feature: {len(self.features)}")
 
-        # Warmup: forza la costruzione dell'indice ball_tree alla partenza
+        # Warmup: forza la prima predizione alla partenza
         _dummy = np.zeros((1, len(self.features)))
         self.model.predict(_dummy)
-        print("  Indice ball_tree: pronto.")
+        print("  Modello pronto per l'inferenza.")
 
     def predict(self, state: dict) -> dict:
         """
