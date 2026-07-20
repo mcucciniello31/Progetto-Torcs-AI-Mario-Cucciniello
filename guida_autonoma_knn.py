@@ -299,6 +299,24 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
             accel = action["accel"]
             brake = action["brake"]
 
+            track_list = state.get("track", [200.0]*19)
+            track_front = track_list[9] if len(track_list) > 9 else 200.0
+
+            # --- STACCATA DI SICUREZZA A DUE LIVELLI (FORZATA SUL DRITTO) ---
+            # Risolve la mancanza di frenata del KNN quando si è fuori traiettoria ottimale
+            is_emergency = False
+            if abs(steer) < 0.18:
+                if speed > 165.0:
+                    if track_front < 82.0:
+                        is_emergency = True
+                elif speed > 70.0:
+                    if track_front < 26.0:
+                        is_emergency = True
+
+            if is_emergency:
+                accel = 0.0
+                brake = max(brake, 0.8)
+
             # --- AMPLIFICAZIONE FRENO KNN ---
             # Contrasta lo smoothing spaziale del KNN. Attiva solo sopra i 25 km/h per evitare stalli.
             if brake > 0.02 and speed > 25.0:
@@ -332,8 +350,6 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
                     brake = min(0.3, brake)
 
             # --- MACCHINA A STATI DI RECUPERO (RECOVERY STATE MACHINE) ---
-            track_list = state.get("track", [200.0]*19)
-            track_front = track_list[9] if len(track_list) > 9 else 200.0
 
             # Se l'auto è ferma o quasi (< 2 km/h) accumula ticks di stallo
             if speed < 2.0:
