@@ -299,7 +299,7 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
             # Se andiamo veloci sul dritto e l'ingresso della chicane è vicino, forziamo il freno per non andare lunghi
             track_list = state.get("track", [200.0]*19)
             track_front = track_list[9] if len(track_list) > 9 else 200.0
-            if speed > 70.0 and abs(steer) < 0.05 and track_front < 20.0:
+            if speed > 70.0 and abs(steer) < 0.05 and track_front < 18.5:
                 brake = max(brake, 0.7)
                 accel = 0.0
 
