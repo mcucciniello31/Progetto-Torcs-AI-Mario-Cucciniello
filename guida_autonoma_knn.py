@@ -296,11 +296,13 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
 
 
             # Amplificazione freno KNN sul dritto per contrastare l'effetto media (smoothing)
-            if brake > 0.02:
+            # Attiva solo sopra i 25 km/h per evitare blocchi a bassa velocità
+            if brake > 0.02 and speed > 25.0:
                 brake = min(1.0, brake * 2.25)
 
-            # Rilascia completamente i freni se l'auto è quasi ferma per evitare blocchi statici
-            if speed < 5.0:
+            # Se l'auto va a bassa velocità e stiamo accelerando (vogliamo ripartire),
+            # rilasciamo completamente i freni per risolvere il conflitto gas/freno.
+            if speed < 15.0 and accel > 0.1:
                 brake = 0.0
 
             # Ripartizione e rilascio in curva per evitare testacoda (EBD) e taglio acceleratore in frenata
