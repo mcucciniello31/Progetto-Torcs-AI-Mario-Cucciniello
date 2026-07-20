@@ -378,7 +378,7 @@ def main():
         verbose=args.verbose,
     )
 
-    print("\n3°STEP COMPLETATO")
+    print("\nGUIDA AUTONOMA COMPLETATA")
 
 
 if __name__ == "__main__":
