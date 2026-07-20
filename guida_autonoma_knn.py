@@ -299,8 +299,8 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
             track_list = state.get("track", [200.0]*19)
             track_front = track_list[9] if len(track_list) > 9 else 200.0
             
-            # Se andiamo veloci (>100 km/h) e la curva si avvicina (<85m)
-            if speed > 100.0 and track_front < 85.0:
+            # Se andiamo veloci (>100 km/h), a ruote dritte (steer < 0.15) e la curva si avvicina (<85m)
+            if speed > 100.0 and track_front < 85.0 and abs(steer) < 0.15:
                 accel = 0.0
                 if track_front < 55.0:
                     brake = max(brake, 0.8)  # staccata forte vicino alla curva
