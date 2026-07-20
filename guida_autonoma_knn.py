@@ -300,8 +300,8 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
             track_front = track_list[9] if len(track_list) > 9 else 200.0
             
             # Soglia dinamica in base alla velocità (spazio di frenata fisico proporzionale alla velocità)
-            safe_threshold = max(5.0, speed * 0.4)
-            critical_threshold = max(2.5, speed * 0.25)
+            safe_threshold = max(4.0, speed * 0.4)
+            critical_threshold = max(2.0, speed * 0.25)
 
             # Se andiamo veloci (>100 km/h), a ruote dritte (steer < 0.15) e la curva si avvicina
             # Rilevamento geometrico: track_front < safe_threshold E più corto dei sensori adiacenti (segno che la pista curva), o in assoluto critico (<critical_threshold)
