@@ -1,3 +1,5 @@
+"""Script per l'immagazinamento di giri completi (in modalità recovery) della pista (manuali) tramite dualshock per PS4"""
+
 import pygame
 import socket
 import sys
@@ -6,7 +8,7 @@ import time
 import csv
 import numpy as np
 
-# --- CONFIGURAZIONE ---
+# Configurazione
 HOST = 'localhost'
 PORT = 3001
 SID = 'SCR'
@@ -19,7 +21,7 @@ DATASET_DIR = os.path.join(BASE_DIR, "dataset_laps")
 if not os.path.exists(DATASET_DIR):
     os.makedirs(DATASET_DIR)
 
-# Mapping DualShock 4
+# Mappatura del DualShock PS4
 AXIS_STEER = 0
 AXIS_ACCEL = 5
 AXIS_BRAKE = 4
