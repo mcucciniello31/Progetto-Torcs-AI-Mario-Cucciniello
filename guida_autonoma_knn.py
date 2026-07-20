@@ -299,14 +299,19 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
             track_list = state.get("track", [200.0]*19)
             track_front = track_list[9] if len(track_list) > 9 else 200.0
             
-            # Se andiamo veloci (>100 km/h), a ruote dritte (steer < 0.15) e la curva si avvicina (<50m)
-            if speed > 100.0 and track_front < 50.0 and abs(steer) < 0.15:
+            # Se andiamo veloci (>100 km/h), a ruote dritte (steer < 0.15) e la curva si avvicina
+            # Rilevamento geometrico: track_front < 50m E più corto dei sensori adiacenti (segno che la pista curva), o in assoluto critico (<35m)
+            is_curve_ahead = False
+            if len(track_list) > 10:
+                is_curve_ahead = (track_front < 50.0 and (track_front < track_list[8] or track_front < track_list[10])) or (track_front < 35.0)
+
+            if speed > 100.0 and is_curve_ahead and abs(steer) < 0.15:
                 accel = 0.0
-                if track_front < 30.0:
+                if track_front < 35.0:
                     brake = max(brake, 0.8)  # staccata forte vicino alla curva
                 else:
                     # Rallentamento progressivo: da 0.2 a 0.7 man mano che ci avviciniamo
-                    progress = (50.0 - track_front) / (50.0 - 30.0)
+                    progress = (50.0 - track_front) / (50.0 - 35.0)
                     brake = max(brake, 0.2 + progress * 0.5)
 
             # Ripartizione e rilascio in curva per evitare testacoda (EBD)
