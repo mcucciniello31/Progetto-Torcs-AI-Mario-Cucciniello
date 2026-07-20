@@ -295,6 +295,14 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
             accel = action["accel"]
             brake = np.clip(action["brake"] * 2.5, 0.0, 1.0)
 
+            # --- FRENATA PREVENTIVA CHICANE ---
+            # Se andiamo veloci sul dritto e l'ingresso della chicane è vicino, forziamo il freno per non andare lunghi
+            track_list = state.get("track", [200.0]*19)
+            track_front = track_list[9] if len(track_list) > 9 else 200.0
+            if speed > 70.0 and abs(steer) < 0.05 and track_front < 22.0:
+                brake = max(brake, 0.7)
+                accel = 0.0
+
             wheel_vel = state.get('wheelSpinVel', [0,0,0,0])
             if len(wheel_vel) == 4:
                 # Controllo di trazione (riduce accel se le ruote dietro slittano più di quelle davanti)
