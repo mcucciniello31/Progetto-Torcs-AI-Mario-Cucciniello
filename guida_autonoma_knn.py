@@ -213,11 +213,10 @@ def print_telemetry(step: int, state: dict, action: dict, source: str):
     ang  = state.get("angle", 0)
     gear = state.get("gear", 1)
     print(
-        f"  step={step:>5} | spd={spd:>6.1f} km/h | "
-        f"pos={tpos:>+.3f} | ang={ang:>+.3f} | "
-        f"gear={gear:.0f} | "
-        f"st={action['steer']:>+.3f} acc={action['accel']:.3f} brk={action['brake']:.3f} "
-        f"[{source}]"
+        f"  step={step:>5}   spd={spd:>6.1f} km/h   "
+        f"pos={tpos:>+.3f}   ang={ang:>+.3f}   "
+        f"gear={gear:.0f}   "
+        f"st={action['steer']:>+.3f}   acc={action['accel']:.3f}   brk={action['brake']:.3f}"
     )
 
 
@@ -365,18 +364,11 @@ def main():
                         help="Stampa telemetria ad ogni step")
     args = parser.parse_args()
 
-    print("=" * 55)
-    print("  STEP 3 – KNN Agent per TORCS")
-    print("=" * 55)
-
     # Carica agente
-    print("\n[1/2] Caricamento modello KNN...")
+    print("1/2 Caricamento modello KNN...")
     agent = KNNAgent()
 
-    print(f"\n[2/2] Avvio loop di guida...")
-    print(f"  Host={args.host}:{args.port} | max_steps={args.steps}")
-    print(f"  (Avvia TORCS e premi Start Race prima di procedere)")
-    input("\n  Premi INVIO quando TORCS è pronto... ")
+    print("\n2/2 Avvio loop di guida...")
 
     drive_loop(
         agent=agent,
@@ -386,9 +378,7 @@ def main():
         verbose=args.verbose,
     )
 
-    print("\n" + "=" * 55)
-    print("  ✓ SESSIONE TERMINATA")
-    print("=" * 55)
+    print("\n3°STEP COMPLETATO")
 
 
 if __name__ == "__main__":
