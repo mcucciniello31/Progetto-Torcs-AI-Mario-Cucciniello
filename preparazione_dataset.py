@@ -110,7 +110,7 @@ def generate_eda_plots(df: pd.DataFrame):
     plt.figure(figsize=(15, 5))
     for i, col in enumerate(TARGET_COLS):
         plt.subplot(1, 3, i+1)
-        sns.histplot(df[col], kde=True, bins=30, color="teal")
+        sns.histplot(df[col], kde=True, bins=30, color="dodgerblue")
         plt.title(f"Distribuzione di {col}")
     plt.tight_layout()
     plt.savefig(os.path.join(PLOTS_DIR, "eda_distributions.png"))
@@ -126,13 +126,13 @@ def generate_eda_plots(df: pd.DataFrame):
     plt.savefig(os.path.join(PLOTS_DIR, "eda_correlations.png"))
     plt.close()
 
-    # Visualizzazione delle traiettorie )
+    # Visualizzazione delle traiettorie
     plt.figure(figsize=(12, 6))
     sns.lineplot(data=df, x="distFromStart", y="trackPos", hue="_source_file", legend=False, alpha=0.6)
-    plt.axhline(1.0, color="red", linestyle="--", label="Bordo Sinistro")
-    plt.axhline(-1.0, color="red", linestyle="--", label="Bordo Destro")
-    plt.title("Traiettoria (Posizione Laterale vs Distanza dal Giro)")
-    plt.xlabel("Distanza di Giro (m)")
+    plt.axhline(1.0, color="crimson", linestyle="--", label="Bordo Sinistro")
+    plt.axhline(-1.0, color="crimson", linestyle="--", label="Bordo Destro")
+    plt.title("Traiettoria (Posizione / Distanza dal Giro)")
+    plt.xlabel("Distanza di Giro (in metri)")
     plt.ylabel("Posizione Laterale (trackPos)")
     plt.savefig(os.path.join(PLOTS_DIR, "eda_track_positions.png"))
     plt.close()
