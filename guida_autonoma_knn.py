@@ -192,12 +192,12 @@ class KNNAgent:
 # LOGICHE AUSILIARIE
 # ─────────────────────────────────────────────
 def auto_gear(speed_kmh: float, current_gear: int, steer: float) -> int:
-    """
-    Cambio marce automatico rule-based.
-    In curva stretta (|steer| > 0.4) mantiene la marcia attuale
-    per evitare scalate indesiderate.
-    """
-    if abs(steer) > 0.4:
+    """Cambio marce automatico con salvaguardie per basse velocità."""
+    # Se siamo fermi o quasi, forza la prima marcia
+    if speed_kmh < 5.0:
+        return 1
+    # In curva stretta mantiene la marcia attuale per evitare scalate brusche, ma solo ad andatura sostenuta
+    if abs(steer) > 0.4 and speed_kmh > 15.0:
         return current_gear
     gear = 1
     for i, th in enumerate(GEAR_SPEEDS):
@@ -298,6 +298,10 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
             # Amplificazione freno KNN sul dritto per contrastare l'effetto media (smoothing)
             if brake > 0.02:
                 brake = min(1.0, brake * 2.25)
+
+            # Rilascia completamente i freni se l'auto è quasi ferma per evitare blocchi statici
+            if speed < 5.0:
+                brake = 0.0
 
             # Ripartizione e rilascio in curva per evitare testacoda (EBD) e taglio acceleratore in frenata
             if brake > 0.05:
