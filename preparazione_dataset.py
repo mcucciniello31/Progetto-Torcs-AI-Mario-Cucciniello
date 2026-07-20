@@ -49,7 +49,7 @@ FEATURE_COLS = [
 ]
 
 # Target da predire (le azioni del pilota durante la corsa)
-TARGET_COLS = ["target_steer", "target_accelerate", "target_brake"]
+TARGET_COLS = ["target_steer", "target_accel", "target_brake"]
 
 def load_all_laps(folder: str) -> pd.DataFrame:
     """Carica tutti i CSV presenti nella cartella e li unisce."""
