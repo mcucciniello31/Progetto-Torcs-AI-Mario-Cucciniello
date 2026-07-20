@@ -1,3 +1,5 @@
+"""Script per l'immagazinamento di giri completi della pista (manuali) tramite dualshock per PS4"""
+
 import pygame
 import socket
 import sys
@@ -6,12 +8,12 @@ import time
 import csv
 import numpy as np
 
-# --- CONFIGURAZIONE ---
+# Configurazione
 HOST = 'localhost'
 PORT = 3001
 SID = 'SCR'
 DATA_SIZE = 2**17
-TRACK_LIMIT = 1.3 
+TRACK_LIMIT = 1.5 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATASET_DIR = os.path.join(BASE_DIR, "dataset_laps")
@@ -19,10 +21,10 @@ DATASET_DIR = os.path.join(BASE_DIR, "dataset_laps")
 if not os.path.exists(DATASET_DIR):
     os.makedirs(DATASET_DIR)
 
-# Mapping DualShock 4
-AXIS_STEER = 0
-AXIS_ACCEL = 5
-AXIS_BRAKE = 4
+# Mappatura DualShock PS4
+AXIS_STEER = 0 #Analogico sinistro
+AXIS_ACCEL = 5 #R2
+AXIS_BRAKE = 4 #L2
 
 class ServerState():
     def __init__(self):
@@ -84,10 +86,10 @@ def save_to_disk(buffer, headers, lap_number, lap_time):
     print(f"\n>>> [SALVATO] Giro {lap_number} | Tempo: {time_str}")
 
 def manual_recording():
-    # --- LOGICA DI REGISTRAZIONE E VALIDAZIONE (SETTING F1) ---
-    # 1. SOGLIA CORDOLO: trackPos < 1.3 OK.
-    # 2. FUORI PISTA/DANNI: Reset automatico.
-    # 3. FINE GIRO: Dopo il salvataggio, riparte da fermo (meta 1).
+    # Registrazione e validazione dei giri, in che modo?
+    # La distanza dei cardoli laterali, trackPos < 1.3 
+    # Se si va fuori pista o si sbatte contro il muro, il giro viene resettato in maniera automatica
+    # Se il giro è ok, eso viene salvato e si viene ricatapultati ad inizio pista (pronti per un altro giro)
 
     pygame.init()
     pygame.joystick.init()
@@ -106,7 +108,7 @@ def manual_recording():
         try:
             sockdata, _ = so.recvfrom(DATA_SIZE)
             if '***identified***' in sockdata.decode():
-                print(">>> CONNESSO A TORCS. PRONTO A REGISTRARE.")
+                print(">>> Connessione a TORCS riuscita. Registrazione giro pronta.")
                 break
         except:
             so.sendto(initmsg.encode(), (HOST, PORT))
@@ -124,54 +126,54 @@ def manual_recording():
     lap_counter = 0
 
     try:
-        while True:
-            try:
-                sockdata, _ = so.recvfrom(DATA_SIZE)
-                sockstr = sockdata.decode()
+    while True:
+        try:
+            sockdata, _ = so.recvfrom(DATA_SIZE)
+            sockstr = sockdata.decode()
                 
-                # --- GESTIONE RESTART (Fuori Pista o Fine Giro) ---
-                if '***restart***' in sockstr:
-                    print("\n[RESET] Caricamento pista in corso...")
-                    lap_buffer, is_dirty, prev_lap_time = [], False, 0.0
-                    initial_damage = None
-                    R.d['meta'] = 0
-                    t0 = time.time() 
+# Restart del giro (in caso di fuori Pista, fine giro o danno accidentale) Fine Giro) ---
+            if '***restart***' in sockstr:
+                print("\n Reset della pista in corso...")
+                lap_buffer, is_dirty, prev_lap_time = [], False, 0.0
+                initial_damage = None
+                R.d['meta'] = 0
+                t0 = time.time() 
 
-                    connected = False
-                    while not connected:
-                        so.sendto(initmsg.encode(), (HOST, PORT))
-                        try:
-                            so.settimeout(0.5) 
-                            resp, _ = so.recvfrom(DATA_SIZE)
-                            if '***identified***' in resp.decode():
-                                print(">>> POSIZIONATO SULLA GRIGLIA. PARTI!")
-                                connected = True
-                                so.settimeout(1.0)
-                        except (socket.timeout, ConnectionResetError):
-                            continue 
-                    continue
+                connected = False
+                while not connected:
+                    so.sendto(initmsg.encode(), (HOST, PORT))
+                    try:
+                        so.settimeout(0.5) 
+                        resp, _ = so.recvfrom(DATA_SIZE)
+                         if '***identified***' in resp.decode():
+                            print(">>> POSIZIONATO SULLA GRIGLIA. PARTI!")
+                            connected = True
+                            so.settimeout(1.0)
+                     except (socket.timeout, ConnectionResetError):
+                    continue 
+                continue
                 
-                S.parse_server_str(sockstr)
+            S.parse_server_str(sockstr)
             
-            except (socket.timeout, ConnectionResetError):
-                if R.d['meta'] == 1:
-                    so.sendto(repr(R).encode(), (HOST, PORT))
+                     except (socket.timeout, ConnectionResetError):
+                         if R.d['meta'] == 1:
+                            so.sendto(repr(R).encode(), (HOST, PORT))
                 continue
 
             if initial_damage is None:
                 initial_damage = S.d.get('damage', 0)
 
-            # --- LOGICA FUORI PISTA ---
+            # Come gestire la corsa quando andiamo fuori dal tracciato
             track_pos = abs(S.d.get('trackPos', 0))
             if track_pos > TRACK_LIMIT:
-                print(f"\n[!!!] FUORI PISTA ({track_pos:.2f}). Reset...")
+                print(f"\n Attenzione!!! - Sei andato fuori pista! ({track_pos:.2f}). Reset del giro...")
                 is_dirty = True
                 R.d['meta'] = 1
                 so.sendto(repr(R).encode(), (HOST, PORT))
                 lap_buffer, prev_lap_time = [], 0.0
                 continue
 
-            # --- LOGICA FINE GIRO + RESTART DA FERMO ---
+            # Come gestire la fine di un giro pulito
             cur_time = S.d.get('curLapTime', 0)
             if cur_time < prev_lap_time and prev_lap_time > 10.0:
                 last_lap_time = S.d.get('lastLapTime', 0)
@@ -180,26 +182,25 @@ def manual_recording():
                     lap_counter += 1
                     save_to_disk(lap_buffer, headers, lap_counter, last_lap_time)
                     
-                    # TRIGGER RESTART DOPO SALVATAGGIO
-                    print(">>> [AUTO-RESTART] Giro completato. Ritorno alla partenza...")
+                    print("Giro completato. Restart della pista...")
                     R.d['meta'] = 1
                     so.sendto(repr(R).encode(), (HOST, PORT))
                     lap_buffer, is_dirty, prev_lap_time = [], False, 0.0
                     continue # Salta il resto e aspetta il segnale di restart
                 else:
-                    print(f">>> [SCARTATO] Giro non valido.")
+                    print(f">>> Attenzione!!! - Giro non valido.")
                 
                 lap_buffer, is_dirty = [], False
                 initial_damage = S.d.get('damage', 0)
             
             prev_lap_time = cur_time
 
-            # Controllo Danni
+            # Come gestire dei danni accidentali
             if (S.d.get('damage', 0) - initial_damage) > 1.0:
-                if not is_dirty: print("\n[!] GIRO SPORCO (Danni).")
+                if not is_dirty: print("\nAttenzione!!! - Giro con danni.")
                 is_dirty = True
 
-            # --- LOGICA GUIDA ---
+            # Come gestire la guida in pista
             speed = S.d.get('speedX', 0)
             steer, accel, brake = get_joystick_input(js, speed)
 
@@ -211,12 +212,12 @@ def manual_recording():
             if brake > 0.1 and abs(steer) > 0.15: 
                 brake *= (1.0 - abs(steer)*0.8)
 
-            #target_gear = 1
+            #target_gear = 1 ---> marcia iniziale= la 1°
             #for i, th in enumerate([0, 45, 90, 145, 200, 260]):
             #    if speed > th: target_gear = i + 1
             #gear = S.d.get('gear', 1) if abs(steer) > 0.4 else target_gear
 
-            # --- CAMBIO AUTOMATICO (Logica Snakeoil con controllo sterzata) ---
+            # Implementazione di un cambio automatica --> A causa di problemi col joystick-
             target_gear = 1
             if speed > 50:
                 target_gear = 2
@@ -229,20 +230,20 @@ def manual_recording():
             if speed > 280:
                 target_gear = 6
 
-            # Se stai sterzando per più del 40%, mantieni la marcia attuale letta dal server, altrimenti usa la target_gear
+            # Se stiamo sterzando abbastanzao, non cambiamo marcia altrimenti perdiamo grip (sottosterziamo/sovrasterziamo)
             gear = S.d.get('gear', 1) if abs(steer) > 0.4 else target_gear
 
-            # Rileva pulsante di restart sul controller (Triangolo=3, Share=8, Options=9)
+            # Come gestire restart manuale (da controller tramite questi 3 tasti: Triangolo=3, Share=8, Options=9)
             meta = 0
             for btn_id in [3, 8, 9]:
                 if btn_id < js.get_numbuttons() and js.get_button(btn_id):
                     meta = 1
-                    print("\n>>> [RESET] Riavvio richiesto dal controller...")
+                    print("\n>>>Attenzione!!! - Riavvio richiesto tramite controller...")
                     break
 
             R.d['steer'], R.d['accel'], R.d['brake'], R.d['gear'], R.d['meta'] = steer, accel, brake, gear, meta
 
-            # --- REGISTRAZIONE ---
+            # Come gestire la registrazione di un giro pulito col joystick
             if headers is None:
                 headers = ["timestamp", "target_steer", "target_accel", "target_brake", "target_gear"]
                 for k in sorted(S.d.keys()):
