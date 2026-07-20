@@ -294,7 +294,14 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
             accel = action["accel"]
             brake = action["brake"]
 
-
+            # Frenata d'emergenza (Safety Fallback)
+            # Se lo spazio d'arresto calcolato a questa velocità supera lo spazio disponibile davanti, frena deciso
+            track_list = state.get("track", [200.0]*19)
+            track_front = track_list[9] if len(track_list) > 9 else 200.0
+            safe_distance = max(35.0, speed * 0.4)
+            if track_front < safe_distance and speed > 60.0:
+                brake = max(brake, 0.8)
+                accel = 0.0
 
             wheel_vel = state.get('wheelSpinVel', [0,0,0,0])
             if len(wheel_vel) == 4:
