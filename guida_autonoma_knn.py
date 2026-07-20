@@ -357,8 +357,19 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
 
             # --- MACCHINA A STATI DI RECUPERO (RECOVERY STATE MACHINE) ---
 
-            # Se l'auto è ferma o quasi (< 2 km/h) accumula ticks di stallo
-            if speed < 2.0:
+            # --- CORREZIONE FUORI PISTA (FALLBACK) ---
+            # Se l'auto finisce fuori pista (erba/sabbia), forza il rientro al centro
+            track_pos = state.get("trackPos", 0.0)
+            is_off_track = abs(track_pos) > 1.0
+            
+            if is_off_track:
+                steer = -0.5 * np.sign(track_pos)
+                accel = 0.35
+                brake = 0.0
+                source = "OFF-TRACK"
+
+            # Se l'auto è ferma o quasi (abs(speed) < 2.0 km/h) accumula ticks di stallo
+            if abs(speed) < 2.0:
                 recovery_ticks += 1
             else:
                 recovery_ticks = max(0, recovery_ticks - 2)
@@ -373,6 +384,7 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
                 gear = -1  # Retromarcia
                 accel = 0.4
                 brake = 0.0
+                source = "RECOVERY"
                 
                 # Sterza al massimo allontanandosi dal muro laterale più vicino
                 track_left = sum(track_list[0:9])
@@ -391,7 +403,7 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
                 # Cambio marce automatico standard se non in recovery
                 current_gear = int(state.get("gear", 1))
                 # Forza prima marcia se l'auto è ferma per evitare di bloccarsi in marce alte
-                if speed < 5.0:
+                if abs(speed) < 5.0:
                     gear = 1
                 else:
                     gear = auto_gear(speed, current_gear, steer)
