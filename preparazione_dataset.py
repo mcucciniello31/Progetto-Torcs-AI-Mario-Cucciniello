@@ -88,7 +88,7 @@ def load_all_laps(folder: str) -> pd.DataFrame:
     print(f"\nIl totale delle righe unite (prima del filtraggio) è: {len(merged)}")
     return merged
 
-def filter_data(df: pd.DataFrame) -> pd.DataFrame:
+def data_filter(df: pd.DataFrame) -> pd.DataFrame:
     """Filtra i dati eliminando fuori pista, problemi allo sterzo o momenti di stallo (acc e fren insieme)"""
     print("\nFiltraggio e pulizia dei dati...")
     
@@ -146,7 +146,7 @@ def main():
         # Salvataggio dataset grezzo
         df.to_csv(os.path.join(MODELS_DIR, "dataset_merged.csv"), index=False)
         
-        df_clean = clean_and_filter_data(df)
+        df_clean = data_filter(df)
         
         # Grafico dello scaling 
         generate_eda_plots(df_clean)
