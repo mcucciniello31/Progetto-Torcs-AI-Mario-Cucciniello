@@ -152,7 +152,7 @@ def main():
         generate_eda_plots(df_clean)
         
         # Normalizzazione delle 24 feature
-        print("\nNormalizzazione delle feature.")
+        print("\nNormalizzazione delle feature...")
         scaler = StandardScaler()
         scaler.fit(df_clean[FEATURE_COLS].values)
         
