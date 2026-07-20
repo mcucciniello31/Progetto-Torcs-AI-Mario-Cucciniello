@@ -146,7 +146,7 @@ def manual_recording():
                         so.settimeout(0.5) 
                         resp, _ = so.recvfrom(DATA_SIZE)
                          if '***identified***' in resp.decode():
-                            print(">>> POSIZIONATO SULLA GRIGLIA. PARTI!")
+                            print(">>> Posizionato sulla griglia di partenza. Vai!")
                             connected = True
                             so.settimeout(1.0)
                      except (socket.timeout, ConnectionResetError):
