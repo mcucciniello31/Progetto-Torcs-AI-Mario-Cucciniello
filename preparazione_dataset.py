@@ -22,8 +22,6 @@ import pickle
 import re
 import numpy as np
 import pandas as pd
-import matplotlib
-matplotlib.use("Agg")  # Backend non interattivo per macOS/server
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
