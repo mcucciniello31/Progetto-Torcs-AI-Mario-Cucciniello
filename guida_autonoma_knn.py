@@ -290,14 +290,14 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
 
             # ── Aiuti alla guida (come nel manual control) ────────────────
             speed = state.get("speedX", 0)
-            steer = action["steer"]
+            steer = action["steer"] * 1.1
             accel = action["accel"]
             brake = action["brake"]
 
 
             # Amplificazione freno KNN sul dritto per contrastare l'effetto media (smoothing)
             if brake > 0.02:
-                brake = min(1.0, brake * 2.2)
+                brake = min(1.0, brake * 2.4)
 
             # Ripartizione e rilascio in curva per evitare testacoda (EBD) e taglio acceleratore in frenata
             if brake > 0.05:
@@ -320,6 +320,7 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
 
             action["accel"] = accel
             action["brake"] = brake
+            action["steer"] = steer
 
             # ── Cambio marce automatico ────────────────────
             current_gear = int(state.get("gear", 1))
