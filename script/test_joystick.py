@@ -7,7 +7,7 @@ def main():
     
     count = pygame.joystick.get_count()
     if count == 0:
-        print("Nessun controller rilevato! Assicurati che sia connesso tramite Bluetooth o cavo USB.")
+        print("Nessun controller rilevato! Assicurati che sia connesso (o tramite Bluetooth o trsmite cavo USB)")
         pygame.quit()
         return
 
@@ -18,7 +18,7 @@ def main():
         print(f"[{i}]: {js.get_name()}")
 
     js = pygame.joystick.Joystick(0)
-    print("\n--- TEST SENSORI JOYSTICK (Premi Ctrl+C per uscire) ---")
+    print("\nTEST SENSORI JOYSTICK (Ctrl+C per uscire)")
     print("Muovi le levette e premi i grilletti per vedere gli indici degli assi...")
     
     try:
@@ -30,7 +30,7 @@ def main():
                 val = js.get_axis(a)
                 axes_states.append(f"Asse {a}: {val:.2f}")
             
-            # Stampa gli stati degli assi su un'unica riga sovrascrivibile
+            # Stampa degli stati degli assi su una riga
             print("\r" + " | ".join(axes_states), end="", flush=True)
             time.sleep(0.1)
     except KeyboardInterrupt:
