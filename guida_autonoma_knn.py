@@ -305,12 +305,12 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
             # --- STACCATA DI SICUREZZA A DUE LIVELLI (FORZATA SUL DRITTO) ---
             # Risolve la mancanza di frenata del KNN quando si è fuori traiettoria ottimale
             is_emergency = False
-            if abs(steer) < 0.18:
+            if abs(steer) < 0.10:
                 if speed > 165.0:
-                    if track_front < 82.0:
+                    if track_front < 80.0:
                         is_emergency = True
                 elif speed > 70.0:
-                    if track_front < 26.0:
+                    if track_front < 20.0:
                         is_emergency = True
 
             if is_emergency:
