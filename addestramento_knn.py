@@ -36,7 +36,7 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from sklearn.neighbors import KNeighborsRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split, cross_val_score, GroupShuffleSplit, GroupKFold
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
@@ -99,14 +99,14 @@ def prepare_xy(df: pd.DataFrame, features: list, scaler):
 # ─────────────────────────────────────────────
 # TRAINING
 # ─────────────────────────────────────────────
-def train(X_train, y_train, k: int) -> KNeighborsRegressor:
-    """Addestra un KNN multi-output sui dati puri senza compressione."""
-    model = KNeighborsRegressor(
-        n_neighbors=k,
-        weights=DEFAULT_WEIGHTS,
-        algorithm=DEFAULT_ALGO,
-        metric=DEFAULT_METRIC,
-        n_jobs=1   # n_jobs=1 e' piu' veloce per query singole su Windows
+def train(X_train, y_train) -> RandomForestRegressor:
+    """Addestra un Random Forest Regressor multi-output."""
+    model = RandomForestRegressor(
+        n_estimators=100,
+        max_depth=16,
+        min_samples_leaf=2,
+        random_state=RANDOM_STATE,
+        n_jobs=-1  # Usa tutti i core per il training veloce
     )
     model.fit(X_train, y_train)
     return model
@@ -115,7 +115,7 @@ def train(X_train, y_train, k: int) -> KNeighborsRegressor:
 # ─────────────────────────────────────────────
 # VALUTAZIONE
 # ─────────────────────────────────────────────
-def evaluate(model: KNeighborsRegressor, X_test, y_test) -> dict:
+def evaluate(model: RandomForestRegressor, X_test, y_test) -> dict:
     """Calcola metriche per ogni target."""
     y_pred = model.predict(X_test)
     results = {}
@@ -196,14 +196,14 @@ def plot_residuals(results: dict):
 # ─────────────────────────────────────────────
 # SALVATAGGIO MODELLO
 # ─────────────────────────────────────────────
-def save_model(model: KNeighborsRegressor):
+def save_model(model: RandomForestRegressor):
     model_path = os.path.join(MODELS_DIR, "knn_model.pkl")
     with open(model_path, "wb") as f:
         pickle.dump(model, f)
-    print(f"\n  Modello KNN salvato: {model_path}")
+    print(f"\n  Modello Random Forest salvato: {model_path}")
 
 
-def load_model() -> KNeighborsRegressor:
+def load_model() -> RandomForestRegressor:
     model_path = os.path.join(MODELS_DIR, "knn_model.pkl")
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Modello non trovato: {model_path}")
@@ -215,7 +215,7 @@ def load_model() -> KNeighborsRegressor:
 # MAIN
 # ─────────────────────────────────────────────
 def main():
-    parser = argparse.ArgumentParser(description="Training KNN per Imitation Learning su TORCS")
+    parser = argparse.ArgumentParser(description="Training Random Forest per Imitation Learning su TORCS")
     parser.add_argument("--dataset",   type=str,  default="dataset_clean.csv", help="Nome file del dataset in models/ (default: dataset_clean.csv)")
     args = parser.parse_args()
 
@@ -232,10 +232,9 @@ def main():
         X, y, test_size=0.20, random_state=RANDOM_STATE
     )
 
-    # 3. Training (foto5: Addestramento KNN)
-    print("\n3/4 Addestramento KNN")
-    k = DEFAULT_K
-    model = train(X_train, y_train, k)
+    # 3. Training (foto5: Addestramento Random Forest)
+    print("\n3/4 Addestramento Random Forest")
+    model = train(X_train, y_train)
     save_model(model)
 
     # 4. Valutazione

@@ -148,14 +148,13 @@ class KNNAgent:
         with open(scaler_path,  "rb") as f: self.scaler   = pickle.load(f)
         with open(feature_path, "rb") as f: self.features = pickle.load(f)
 
-        print(f"  Modello KNN caricato ({self.model.n_neighbors} vicini)")
+        print(f"  Modello Random Forest caricato ({len(self.model.estimators_)} alberi)")
         print(f"  Feature: {len(self.features)}")
 
-        # Warmup: forza la costruzione dell'indice ball_tree alla partenza
-        # (evita latenza elevata al primo step reale)
+        # Warmup: forza la prima predizione alla partenza
         _dummy = np.zeros((1, len(self.features)))
         self.model.predict(_dummy)
-        print("  Indice ball_tree: pronto.")
+        print("  Modello pronto per l'inferenza.")
 
     def predict(self, state: dict) -> dict:
         """
@@ -259,6 +258,11 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
     step         = 0
     knn_cnt      = 0
 
+    # Variabili per la macchina a stati di recupero (Recovery State Machine)
+    recovery_ticks = 0
+    recovery_mode  = False
+    recovery_timer = 0
+
     try:
         while step < max_steps:
             # ── Ricezione dati dal server ──────────────────
@@ -295,25 +299,74 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
             accel = action["accel"]
             brake = action["brake"]
 
+            # --- MUTUA ESCLUSIONE PEDALI (anti-burnout) ---
+            if brake > 0.05 and accel > 0.05:
+                if brake > accel:
+                    accel = 0.0
+                else:
+                    brake = 0.0
+
+            # --- CONTROLLO DI TRAZIONE (TCS) ---
             wheel_vel = state.get('wheelSpinVel', [0,0,0,0])
             if len(wheel_vel) == 4:
-                # Controllo di trazione (riduce accel se le ruote dietro slittano più di quelle davanti)
                 if (wheel_vel[2]+wheel_vel[3]) - (wheel_vel[0]+wheel_vel[1]) > 15:
                     accel *= 0.5
-                # ABS base (riduce freno se a bassa velocità c'è rischio di blocco ruote anteriori)
-                if brake > 0.1 and speed > 15 and (wheel_vel[0]+wheel_vel[1])/2.0 < 5:
-                    brake *= 0.1
 
-            # Ripartitore frenata in curva (riduce freno quando si sterza bruscamente)
-            if brake > 0.1 and abs(steer) > 0.15: 
-                brake *= (1.0 - abs(steer)*0.8)
+            # --- ABS E EBD (ripartitore di frenata) ---
+            if brake > 0.05:
+                # ABS
+                if speed > 15.0 and len(wheel_vel) == 4 and (wheel_vel[0]+wheel_vel[1])/2.0 < 5:
+                    brake *= 0.1
+                # EBD (cap freno in curva per stabilità dello sterzo)
+                if abs(steer) >= 0.15:
+                    brake = min(0.3, brake)
+
+            # --- MACCHINA A STATI DI RECUPERO (RECOVERY STATE MACHINE) ---
+            track_list = state.get("track", [200.0]*19)
+            track_front = track_list[9] if len(track_list) > 9 else 200.0
+
+            # Se l'auto è ferma o quasi (< 2 km/h) accumula ticks di stallo
+            if speed < 2.0:
+                recovery_ticks += 1
+            else:
+                recovery_ticks = max(0, recovery_ticks - 2)
+
+            # Se siamo bloccati da più di 80 step (circa 1.5 secondi)
+            if recovery_ticks > 80:
+                recovery_mode = True
+
+            # Esecuzione stato di recupero
+            if recovery_mode:
+                recovery_timer += 1
+                gear = -1  # Retromarcia
+                accel = 0.4
+                brake = 0.0
+                
+                # Sterza al massimo allontanandosi dal muro laterale più vicino
+                track_left = sum(track_list[0:9])
+                track_right = sum(track_list[10:19])
+                if track_left > track_right:
+                    steer = 0.8  # Gira a sinistra
+                else:
+                    steer = -0.8 # Gira a destra
+
+                # Esci dal recupero dopo 90 step (1.8s) o se c'è spazio davanti (> 15m) dopo un minimo di retromarcia
+                if recovery_timer > 90 or (track_front > 15.0 and recovery_timer > 40):
+                    recovery_mode = False
+                    recovery_ticks = 0
+                    recovery_timer = 0
+            else:
+                # Cambio marce automatico standard se non in recovery
+                current_gear = int(state.get("gear", 1))
+                # Forza prima marcia se l'auto è ferma per evitare di bloccarsi in marce alte
+                if speed < 5.0:
+                    gear = 1
+                else:
+                    gear = auto_gear(speed, current_gear, steer)
 
             action["accel"] = accel
             action["brake"] = brake
-
-            # ── Cambio marce automatico ────────────────────
-            current_gear = int(state.get("gear", 1))
-            gear = auto_gear(speed, current_gear, action["steer"])
+            action["steer"] = steer
 
             # ── Costruzione risposta ──────────────────────
             R.d["steer"] = action["steer"]
