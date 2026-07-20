@@ -162,7 +162,7 @@ class KNNAgent:
         Riceve il dizionario stato TORCS (S.d) e restituisce
         {'steer', 'accel', 'brake'} come float clippati.
         """
-        # Appiattiamo le liste (es. wheelSpinVel -> wheelSpinVel_0, _1, ecc.) come nel CSV
+        # Appiattiamo le lists (es. wheelSpinVel -> wheelSpinVel_0, _1, ecc.) come nel CSV
         flat_state = {}
         for k, v in state.items():
             if isinstance(v, list):
@@ -192,12 +192,12 @@ class KNNAgent:
 # LOGICHE AUSILIARIE
 # ─────────────────────────────────────────────
 def auto_gear(speed_kmh: float, current_gear: int, steer: float) -> int:
-    """Cambio marce automatico con salvaguardie per basse velocità."""
-    # Se siamo fermi o quasi, forza la prima marcia
-    if speed_kmh < 5.0:
-        return 1
-    # In curva stretta mantiene la marcia attuale per evitare scalate brusche, ma solo ad andatura sostenuta
-    if abs(steer) > 0.4 and speed_kmh > 15.0:
+    """
+    Cambio marce automatico rule-based.
+    In curva stretta (|steer| > 0.4) mantiene la marcia attuale
+    per evitare scalate desiderate.
+    """
+    if abs(steer) > 0.4:
         return current_gear
     gear = 1
     for i, th in enumerate(GEAR_SPEEDS):
@@ -213,10 +213,11 @@ def print_telemetry(step: int, state: dict, action: dict, source: str):
     ang  = state.get("angle", 0)
     gear = state.get("gear", 1)
     print(
-        f"  step={step:>5}   spd={spd:>6.1f} km/h   "
-        f"pos={tpos:>+.3f}   ang={ang:>+.3f}   "
-        f"gear={gear:.0f}   "
-        f"st={action['steer']:>+.3f}   acc={action['accel']:.3f}   brk={action['brake']:.3f}"
+        f"  step={step:>5} | spd={spd:>6.1f} km/h | "
+        f"pos={tpos:>+.3f} | ang={ang:>+.3f} | "
+        f"gear={gear:.0f} | "
+        f"st={action['steer']:>+.3f} acc={action['accel']:.3f} brk={action['brake']:.3f} "
+        f"[{source}]"
     )
 
 
@@ -290,27 +291,9 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
 
             # ── Aiuti alla guida (come nel manual control) ────────────────
             speed = state.get("speedX", 0)
-            steer = action["steer"] * 1.1
+            steer = action["steer"]
             accel = action["accel"]
             brake = action["brake"]
-
-
-            # Amplificazione freno KNN sul dritto per contrastare l'effetto media (smoothing)
-            # Attiva solo sopra i 25 km/h per evitare blocchi a bassa velocità
-            if brake > 0.02 and speed > 25.0:
-                brake = min(1.0, brake * 2.25)
-
-            # Se l'auto va a bassa velocità e stiamo accelerando (vogliamo ripartire),
-            # rilasciamo completamente i freni per risolvere il conflitto gas/freno.
-            if speed < 15.0 and accel > 0.1:
-                brake = 0.0
-
-            # Ripartizione e rilascio in curva per evitare testacoda (EBD) e taglio acceleratore in frenata
-            if brake > 0.05:
-                if speed > 20.0:
-                    accel = 0.0
-                if abs(steer) >= 0.15:
-                    brake = min(0.3, brake)  # limita il freno se stiamo sterzando
 
             wheel_vel = state.get('wheelSpinVel', [0,0,0,0])
             if len(wheel_vel) == 4:
@@ -321,13 +304,12 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
                 if brake > 0.1 and speed > 15 and (wheel_vel[0]+wheel_vel[1])/2.0 < 5:
                     brake *= 0.1
 
-            # Ripartitore frenata in curva (sostituito dalle logiche sopra)
-            # if brake > 0.1 and abs(steer) > 0.15: 
-            #     brake *= (1.0 - abs(steer)*0.8)
+            # Ripartitore frenata in curva (riduce freno quando si sterza bruscamente)
+            if brake > 0.1 and abs(steer) > 0.15: 
+                brake *= (1.0 - abs(steer)*0.8)
 
             action["accel"] = accel
             action["brake"] = brake
-            action["steer"] = steer
 
             # ── Cambio marce automatico ────────────────────
             current_gear = int(state.get("gear", 1))
@@ -374,11 +356,18 @@ def main():
                         help="Stampa telemetria ad ogni step")
     args = parser.parse_args()
 
+    print("=" * 55)
+    print("  STEP 3 – KNN Agent per TORCS")
+    print("=" * 55)
+
     # Carica agente
-    print("1/2 Caricamento modello KNN...")
+    print("\n[1/2] Caricamento modello KNN...")
     agent = KNNAgent()
 
-    print("\n2/2 Avvio loop di guida...")
+    print(f"\n[2/2] Avvio loop di guida...")
+    print(f"  Host={args.host}:{args.port} | max_steps={args.steps}")
+    print(f"  (Avvia TORCS e premi Start Race prima di procedere)")
+    input("\n  Premi INVIO quando TORCS è pronto... ")
 
     drive_loop(
         agent=agent,
@@ -388,7 +377,9 @@ def main():
         verbose=args.verbose,
     )
 
-    print("\n3°STEP COMPLETATO")
+    print("\n" + "=" * 55)
+    print("  ✓ SESSIONE TERMINATA")
+    print("=" * 55)
 
 
 if __name__ == "__main__":
