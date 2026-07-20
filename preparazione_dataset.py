@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 AI-AutonomeGuide - preparazione_dataset.py
-========================================
+
 Unisce tutti i CSV dei giri presenti in dataset_laps/, esegue la pulizia dei dati,
 seleziona i giri migliori e genera i file per l'addestramento.
 
@@ -9,7 +9,7 @@ Output generati:
   - models/dataset_merged.csv      -> tutti i dati uniti
   - models/dataset_clean.csv       -> dati puliti e filtrati
   - models/scaler.pkl              -> StandardScaler addestrato
-  - models/feature_names.pkl       -> elenco delle feature usate
+  - models/feature_names.pkl       -> elenco delle feature utilizzate
   - plots/eda_distributions.png    -> distribuzione dei target
   - plots/eda_correlations.png     -> heatmap di correlazione
   - plots/eda_track_positions.png  -> visualizzazione traiettorie
@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 
-# --- CONFIGURAZIONE ---
+# CONFIGURAZIONE
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATASET_DIR = os.path.join(BASE_DIR, "dataset_laps")
 MODELS_DIR = os.path.join(BASE_DIR, "models")
@@ -50,16 +50,16 @@ FEATURE_COLS = [
     "track_15", "track_16", "track_17", "track_18",
 ]
 
-# Target da predire (le azioni del pilota)
-TARGET_COLS = ["target_steer", "target_accel", "target_brake"]
+# Target da predire (le azioni del pilota durante la corsa)
+TARGET_COLS = ["target_steer", "target_accelerate", "target_brake"]
 
 def load_all_laps(folder: str) -> pd.DataFrame:
-    """Carica tutti i CSV di giro presenti nella cartella e li unisce."""
+    """Carica tutti i CSV presenti nella cartella e li unisce."""
     files = sorted(glob.glob(os.path.join(folder, "*.csv")))
     if not files:
         raise FileNotFoundError(
             f"Nessun file *.csv trovato in: {folder}\n"
-            "Guida prima manualmente l'auto avviando controllo_manuale_tastiera.py o controllo_manuale_dualshockPS4.py."
+            "ATTENZIONE: bisogna prima guidare manualmente l'auto avviando controllo_manuale_tastiera.py o controllo_manuale_dualshockPS4.py"
         )
 
     frames = []
@@ -68,12 +68,11 @@ def load_all_laps(folder: str) -> pd.DataFrame:
         df = pd.read_csv(fp)
         df["_source_file"] = os.path.basename(fp)   # traccia il file di origine
         
-        # Se manca distFromStart (perché è stato rimosso o rinominato), lo ricrea integrando la velocità sul tempo
+        # Se manca distFromStart, ricrearlo 
         if "timestamp" in df.columns and "speedX" in df.columns:
             dt = df["timestamp"].diff().fillna(0.02)
             df["distFromStart"] = (df["speedX"] / 3.6 * dt).cumsum()
         else:
-            # Fallback approssimativo basato sull'indice della riga
             df["distFromStart"] = np.arange(len(df)) * 0.5
             
         frames.append(df)
@@ -81,37 +80,35 @@ def load_all_laps(folder: str) -> pd.DataFrame:
 
     merged = pd.concat(frames, ignore_index=True)
     
-    # Calcola la media della velocità angolare delle ruote (wheelSpinVel)
+    # Calcolo della media della velocità angolare delle ruote 
     wsv_cols = ["wheelSpinVel_0", "wheelSpinVel_1", "wheelSpinVel_2", "wheelSpinVel_3"]
     if all(c in merged.columns for c in wsv_cols):
         merged["wsv_avg"] = merged[wsv_cols].mean(axis=1)
     else:
         merged["wsv_avg"] = 0.0
 
-    print(f"\nTotale righe grezze unite: {len(merged)}")
+    print(f"\nIl totale delle righe unite (prima del filtraggio) è: {len(merged)}")
     return merged
 
-def clean_and_filter_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Filtra i dati eliminando sbandate, fuori pista gravi o istanti di fermo."""
-    print("\nFiltro e pulizia dei dati...")
+def filter_data(df: pd.DataFrame) -> pd.DataFrame:
+    """Filtra i dati eliminando fuori pista, problemi allo sterzo o momenti di stallo (acc e fren insieme)"""
+    print("\nFiltraggio e pulizia dei dati...")
     
-    # 1. Rimuove righe dove l'auto è ferma (velocità < 5 km/h)
+    #Rimozione righe dove l'auto è ferma, approssimativamente con velocità < 5 km/h
     df_clean = df[df["speedX"] > 5.0].copy()
     
-    # 2. Rimuove righe con fuori pista gravi (trackPos > 1.3)
-    df_clean = df_clean[df_clean["trackPos"].abs() <= 1.3]
+    # Rimozione righe con fuori pista, approssimativamente con trackPos > 1.5
+    df_clean = df_clean[df_clean["trackPos"].abs() <= 1.5]
     
-    # 3. Rimuove righe dove non c'è accelerazione o lo sterzo è nullo (es. fase di reset)
+    # Rimozione righe dove c'è stallo 
     df_clean = df_clean.dropna(subset=FEATURE_COLS + TARGET_COLS)
     
-    print(f"Righe dopo la pulizia: {len(df_clean)} (scartate {len(df) - len(df_clean)} righe)")
+    print(f"Righe dopo il filtraggio: {len(df_clean)} (eliminate {len(df) - len(df_clean)} righe)")
     return df_clean
 
 def generate_eda_plots(df: pd.DataFrame):
-    """Genera grafici esplorativi e li salva nella cartella plots/."""
-    print("\nGenerazione dei grafici EDA...")
-    
-    # 1. Distribuzione dei Target
+    """Generazione grafici di progetto."""
+    # Target
     plt.figure(figsize=(15, 5))
     for i, col in enumerate(TARGET_COLS):
         plt.subplot(1, 3, i+1)
@@ -121,7 +118,7 @@ def generate_eda_plots(df: pd.DataFrame):
     plt.savefig(os.path.join(PLOTS_DIR, "eda_distributions.png"))
     plt.close()
     
-    # 2. Heatmap di correlazione
+    # Heatmap di correlazione
     plt.figure(figsize=(12, 10))
     corr_cols = ["angle", "trackPos", "speedX", "wsv_avg"] + TARGET_COLS
     corr = df[corr_cols].corr()
@@ -131,7 +128,7 @@ def generate_eda_plots(df: pd.DataFrame):
     plt.savefig(os.path.join(PLOTS_DIR, "eda_correlations.png"))
     plt.close()
 
-    # 3. Visualizzazione traiettoria (trackPos vs distFromStart)
+    # Visualizzazione delle traiettorie )
     plt.figure(figsize=(12, 6))
     sns.lineplot(data=df, x="distFromStart", y="trackPos", hue="_source_file", legend=False, alpha=0.6)
     plt.axhline(1.0, color="red", linestyle="--", label="Bordo Sinistro")
@@ -141,44 +138,41 @@ def generate_eda_plots(df: pd.DataFrame):
     plt.ylabel("Posizione Laterale (trackPos)")
     plt.savefig(os.path.join(PLOTS_DIR, "eda_track_positions.png"))
     plt.close()
-    print(f"Grafici salvati con successo in: {PLOTS_DIR}")
+    print(f"Grafici salvati in: {PLOTS_DIR}")
 
 def main():
     try:
-        # Carica tutti i file CSV
+        # Caricamento di tutti i file dei giri di test
         df = load_all_laps(DATASET_DIR)
         
-        # Salva dataset unito grezzo
+        # Salvataggio dataset grezzo
         df.to_csv(os.path.join(MODELS_DIR, "dataset_merged.csv"), index=False)
         
-        # Esegui pulizia
         df_clean = clean_and_filter_data(df)
         
-        # Genera i grafici prima dello scaling per avere valori reali
+        # Grafico dello scaling 
         generate_eda_plots(df_clean)
         
-        # Esegui normalizzazione delle feature
-        print("\nNormalizzazione delle feature (StandardScaler)...")
+        # Normalizzazione delle 24 feature
+        print("\nNormalizzazione delle feature.")
         scaler = StandardScaler()
         scaler.fit(df_clean[FEATURE_COLS].values)
         
-        # Salva dataset pulito
+        # Salvataggio dataset pulito
         df_clean.to_csv(os.path.join(MODELS_DIR, "dataset_clean.csv"), index=False)
         
-        # Salva lo scaler e la lista delle feature
+        # Salvataggio dello scaler con la lista delle feature
         with open(os.path.join(MODELS_DIR, "scaler.pkl"), "wb") as f:
             pickle.dump(scaler, f)
         with open(os.path.join(MODELS_DIR, "feature_names.pkl"), "wb") as f:
             pickle.dump(FEATURE_COLS, f)
             
-        print("\n" + "="*50)
-        print(" PREPARAZIONE DEI DATI COMPLETATA CON SUCCESSO!")
+        print(" Dati preparati con successo!!!")
         print(f" Scaler salvato in: {os.path.join(MODELS_DIR, 'scaler.pkl')}")
-        print(f" Dataset pulito in: {os.path.join(MODELS_DIR, 'dataset_clean.csv')}")
-        print("="*50)
+        print(f" Dataset pulito salvato in: {os.path.join(MODELS_DIR, 'dataset_clean.csv')}")
         
     except Exception as e:
-        print(f"\nERRORE durante la preparazione dei dati: {e}")
+        print(f"\Errore {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
