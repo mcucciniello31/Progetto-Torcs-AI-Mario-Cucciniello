@@ -86,10 +86,9 @@ def save_to_disk(buffer, headers, lap_number, lap_time):
     print(f"\n>>> [SALVATO] Recovery Giro {lap_number} | Tempo: {time_str}")
 
 def manual_recording():
-    # --- LOGICA DI REGISTRAZIONE PER RECOVERY ---
-    # Nessun limite di uscita pista
-    # Nessun restart automatico
-    # Salva sempre a fine giro o quando fermato
+    # Registrazione e validazione dei giri recovery, in che modo?
+    # Non ci sono limiti di uscita pista --> Di conseguenza nessun restart automatico
+    # Lo script salva SEMPRE a fine giro o quando lo si ferma manualmente
 
     pygame.init()
     pygame.joystick.init()
@@ -130,9 +129,9 @@ def manual_recording():
                 sockdata, _ = so.recvfrom(DATA_SIZE)
                 sockstr = sockdata.decode()
                 
-                # --- GESTIONE RESTART MANUALE ---
+                # Restart del giro
                 if '***restart***' in sockstr:
-                    print("\n[RESET] Caricamento pista in corso...")
+                    print("\nReset della pista in corso...")
                     lap_buffer, prev_lap_time = [], 0.0
                     initial_damage = None
                     R.d['meta'] = 0
@@ -145,7 +144,7 @@ def manual_recording():
                             so.settimeout(0.5) 
                             resp, _ = so.recvfrom(DATA_SIZE)
                             if '***identified***' in resp.decode():
-                                print(">>> POSIZIONATO SULLA GRIGLIA. PARTI!")
+                                print(">>> Posizionato sulla griglia di partenza. Vai!")
                                 connected = True
                                 so.settimeout(1.0)
                         except (socket.timeout, ConnectionResetError):
