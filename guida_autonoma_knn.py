@@ -297,7 +297,7 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
 
             # Amplificazione freno KNN sul dritto per contrastare l'effetto media (smoothing)
             if brake > 0.02:
-                brake = min(1.0, brake * 2.4)
+                brake = min(1.0, brake * 2.25)
 
             # Ripartizione e rilascio in curva per evitare testacoda (EBD) e taglio acceleratore in frenata
             if brake > 0.05:
