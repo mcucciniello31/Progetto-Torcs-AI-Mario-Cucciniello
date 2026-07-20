@@ -295,9 +295,13 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
             brake = action["brake"]
 
 
-            # Taglia l'acceleratore se si sta frenando (evita che il motore spinga contro i freni)
+            # Ripartizione frenata (frenata forte sul dritto, controllata in curva per evitare testacoda)
             if brake > 0.05:
                 accel = 0.0
+                if abs(steer) < 0.15:
+                    brake = min(1.0, brake * 2.0)  # frena forte in rettilineo
+                else:
+                    brake = min(0.3, brake)        # limita il freno in curva per non sbandare
 
             wheel_vel = state.get('wheelSpinVel', [0,0,0,0])
             if len(wheel_vel) == 4:
@@ -308,7 +312,7 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
                 if brake > 0.1 and speed > 15 and (wheel_vel[0]+wheel_vel[1])/2.0 < 5:
                     brake *= 0.1
 
-            # Ripartitore frenata in curva (temporaneamente disattivato per non tagliare la forza frenante in inserimento)
+            # Ripartitore frenata in curva (sostituito dalla logica di ripartizione sopra)
             # if brake > 0.1 and abs(steer) > 0.15: 
             #     brake *= (1.0 - abs(steer)*0.8)
 
