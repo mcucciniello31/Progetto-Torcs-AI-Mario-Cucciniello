@@ -25,7 +25,7 @@ HOST = 'localhost'
 PORT = 3001
 SID = 'SCR'
 DATA_SIZE = 2**17
-TRACK_LIMIT = 1.3  # Limite per considerare l'auto fuori pista
+TRACK_LIMIT = 1.05  # Limite per considerare l'auto fuori pista
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATASET_DIR = os.path.join(BASE_DIR, "dataset_laps")
@@ -126,7 +126,7 @@ class KeyboardController:
     def update(self, sensors):
         current_speed = sensors.get('speedX', 0.0)
 
-        # 1. Calcolo target sterzo
+        # Calcolo target sterzo
         target_steer = 0.0
         if 'left' in self.keys:
             target_steer = 1.0
@@ -146,14 +146,14 @@ class KeyboardController:
         final_steer = self.steer + stabilization
         final_steer = max(-1.0, min(1.0, final_steer))
 
-        # 2. Calcolo acceleratore
+        # Calcolo acceleratore
         target_accel = 0.0
         if 'up' in self.keys:
             target_accel = 1.0
         self.accel += 0.20 * (target_accel - self.accel)
         self.accel = max(0.0, min(1.0, self.accel))
 
-        # 3. Calcolo freno
+        # Calcolo freno
         target_brake = 0.0
         if 'down' in self.keys:
             target_brake = 1.0
@@ -190,16 +190,16 @@ def main():
     is_recovery = args.recovery
 
     print("=" * 60)
-    print(" AI-AutonomeGuide - GUIDA MANUALE E REGISTRAZIONE DATASET")
+    print(" AI-AutonomeGuide - GUIDA MANUALE DA TASTIERA E REGISTRAZIONE DATASET")
     if is_recovery:
         print(" (MODALITÀ REGISTRAZIONE RECOVERY LAPS: recovery_lap_*.csv)")
     else:
         print(" (MODALITÀ REGISTRAZIONE NORMAL LAPS: lap_*.csv)")
     print("=" * 60)
     print("Controlli:")
-    print("  - Frecce Direzionali : Sterzo / Gas / Freno")
-    print("  - Tasti W / S        : Cambio Marcia Manuale")
-    print("  - Tasto R            : Riavvio Gara (Restart)")
+    print("  - Frecce Direzionali : Sterzo (frecce a sinistra e destra) / Gas (freccia in alto) / Freno (freccia in basso)")
+    print("  - Tasti W / S        : Cambio Marcia Manuale: W scala in avanti, S scala indietro")
+    print("  - Tasto R            : Riavvio")
     print("  - Barra Spaziatrice  : Attiva/Disattiva Registrazione")
     print("-" * 60)
 
@@ -255,7 +255,7 @@ def main():
             damage = S.d.get('damage', 0.0)
             speed_x = S.d.get('speedX', 0.0)
 
-            # Rilevamento completamento giro (reset curLapTime dopo aver corso)
+            # Rilevamento completamento giro (reset dopo aver corso se va tutto bene)
             if cur_lap_time < prev_lap_time and prev_lap_time > 10.0:
                 # Salva il giro
                 save_to_disk(buffer, HEADERS, lap_number, prev_lap_time, is_recovery)
@@ -263,7 +263,7 @@ def main():
                 buffer = []
                 prev_lap_time = 0.0
                 prev_damage = damage
-                # Forza il riavvio per fermare l'auto sulla griglia e avere partenze pulite
+                # Forza il riavvio per fermare l'auto sulla griglia di partenza
                 R.d['meta'] = 1
                 so.sendto(str(R).encode(), (HOST, PORT))
                 time.sleep(0.5)
@@ -272,14 +272,14 @@ def main():
             # Aggiorna controlli dal tastierino
             steer, accel, brake, gear, meta = ctrl.update(S.d)
 
-            # Se l'utente preme 'R' per riavviare manualmente, svuota il buffer del giro
+            # Se si preme 'R' per riavviare manualmente, si svuota il buffer del giro
             if meta == 1:
-                print(f"\n>>> [ANNULLATO] Gara riavviata manualmente. Giro scartato.")
+                print(f"\n>>> Gara riavviata manualmente. Giro scartato.")
                 buffer = []
                 prev_lap_time = 0.0
                 prev_damage = damage
 
-            # Costruisci risposta per TORCS
+            # Risposta per TORCS
             R.d['steer'] = steer
             R.d['accel'] = accel
             R.d['brake'] = brake
