@@ -161,41 +161,40 @@ def manual_recording():
             if initial_damage is None:
                 initial_damage = S.d.get('damage', 0)
 
-            # --- LOGICA FUORI PISTA (DISATTIVATA) ---
+            # Come gestire la corsa con l'uscita dal tracciato --> è disattivata
             # Permettiamo le uscite di pista per raccogliere i dati di recovery
             track_pos = abs(S.d.get('trackPos', 0))
             if track_pos > TRACK_LIMIT:
                 pass # Nessun reset automatico
 
-            # --- LOGICA FINE GIRO + RESTART DA FERMO ---
+            # Come gestire la fine di un giro pulito
             cur_time = S.d.get('curLapTime', 0)
             if cur_time < prev_lap_time and prev_lap_time > 10.0:
                 last_lap_time = S.d.get('lastLapTime', 0)
                 
-                if len(lap_buffer) > 100: # Rilassato il constraint per giri sporchi
+                if len(lap_buffer) > 100: 
                     lap_counter += 1
                     save_to_disk(lap_buffer, headers, lap_counter, last_lap_time)
                     
-                    # TRIGGER RESTART DOPO SALVATAGGIO
-                    print(">>> [AUTO-RESTART] Giro completato. Ritorno alla partenza...")
+                    print("Giro completato. Restart della pista...")
                     R.d['meta'] = 1
                     so.sendto(repr(R).encode(), (HOST, PORT))
                     lap_buffer, prev_lap_time = [], 0.0
                     continue # Salta il resto e aspetta il segnale di restart
                 else:
-                    print(f">>> [SCARTATO] Giro non valido o troppo breve.")
+                    print(f">>> Attenzione!!! - Giro non valido o troppo breve.")
                 
                 lap_buffer = []
                 initial_damage = S.d.get('damage', 0)
             
             prev_lap_time = cur_time
 
-            # Controllo Danni (Solo per avviso)
+            # Come gestire dei danni accidentali
             if (S.d.get('damage', 0) - initial_damage) > 1.0:
-                print("\n[!] Danni registrati. Il giro non sar\u00e0 invalidato (modalit\u00e0 recovery).")
+                print("\nAttenzione!!! - Giro con danni registrati. Il giro non sar\u00e0 validato")
                 initial_damage = S.d.get('damage', 0)
 
-            # --- LOGICA GUIDA ---
+            #Come gestire la guida in pista
             speed = S.d.get('speedX', 0)
             steer, accel, brake = get_joystick_input(js, speed)
 
@@ -207,7 +206,7 @@ def manual_recording():
             if brake > 0.1 and abs(steer) > 0.15: 
                 brake *= (1.0 - abs(steer)*0.8)
 
-            # --- CAMBIO AUTOMATICO (Logica Snakeoil con controllo sterzata) ---
+            # Implementazione di un cambio automatico --> A causa di problemi dol jopystick
             target_gear = 1
             if speed > 50:
                 target_gear = 2
@@ -219,10 +218,11 @@ def manual_recording():
                 target_gear = 5
             if speed > 280:
                 target_gear = 6
-
+                
+            # Se stiamo sterzando abbastanza, non cambiamo marcia altrimenti perdiamo grip (sottosterzo/sovrasterzo)
             gear = S.d.get('gear', 1) if abs(steer) > 0.4 else target_gear
 
-            # Rileva pulsante di restart sul controller (Triangolo=3, Share=8, Options=9)
+            # Come gestire restart manuale (da controller tramite questi 3 tasti: Triangolo=3, Share=8, Options=9)
             meta = 0
             for btn_id in [3, 8, 9]:
                 if btn_id < js.get_numbuttons() and js.get_button(btn_id):
@@ -232,7 +232,7 @@ def manual_recording():
 
             R.d['steer'], R.d['accel'], R.d['brake'], R.d['gear'], R.d['meta'] = steer, accel, brake, gear, meta
 
-            # --- REGISTRAZIONE ---
+            # Come gestire la registrazione di un giro pulito col joystick (recovery)
             if headers is None:
                 headers = ["timestamp", "target_steer", "target_accel", "target_brake", "target_gear"]
                 for k in sorted(S.d.keys()):
