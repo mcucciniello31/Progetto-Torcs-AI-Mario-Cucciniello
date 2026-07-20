@@ -2,7 +2,7 @@
 """
 AI-AutonomeGuide - preparazione_dataset.py
 
-Unisce tutti i CSV dei giri presenti in dataset_laps/, esegue la pulizia dei dati,
+Script che unisce tutti i CSV dei giri presenti in dataset_laps/, esegue la pulizia dei dati,
 seleziona i giri migliori e genera i file per l'addestramento.
 
 Output generati:
