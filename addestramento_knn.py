@@ -55,7 +55,7 @@ TARGET_RANGES = {
 }
 
 # Iperparametri default
-DEFAULT_K         = 3            # numero vicini (default se non cercato)
+DEFAULT_K         = 3            # numero vicini (ottimale da CV su questi dati)
 DEFAULT_WEIGHTS   = "distance"   # "uniform" oppure "distance"
 DEFAULT_ALGO      = "ball_tree"  # piu' veloce di "brute" su dataset medi
 DEFAULT_METRIC    = "euclidean"
@@ -82,6 +82,7 @@ def load_artifacts(dataset_filename="dataset_clean.csv"):
     with open(scaler_path,  "rb") as f: scaler  = pickle.load(f)
     with open(feature_path, "rb") as f: features = pickle.load(f)
 
+    print(f"  Dataset: {len(df)} righe, {len(features)} feature")
     return df, scaler, features
 
 
@@ -90,10 +91,44 @@ def prepare_xy(df: pd.DataFrame, features: list, scaler):
     X_raw = df[features].values
     y     = df[TARGET_COLS].values
     X     = scaler.transform(X_raw)
-    return X, y
+    groups = df["_source_file"].values if "_source_file" in df.columns else None
+    return X, y, groups
 
 
+# ─────────────────────────────────────────────
+# RICERCA AUTOMATICA DI K (opzionale)
+# ─────────────────────────────────────────────
+def find_best_k(X_train, y_train, groups_train=None, k_range=range(3, 15, 2)):
+    """
+    Valuta vari valori di k tramite cross-validation (3-fold)
+    sul solo sterzo (il target più critico) e restituisce il migliore.
+    Se sono disponibili i gruppi (source_file), usa GroupKFold.
+    """
+    print("  Ricerca del k ottimale via 3-fold CV (steer)...")
+    best_k, best_score = DEFAULT_K, -np.inf
 
+    for k in k_range:
+        model = KNeighborsRegressor(
+            n_neighbors=k,
+            weights=DEFAULT_WEIGHTS,
+            algorithm=DEFAULT_ALGO,
+            metric=DEFAULT_METRIC,
+            n_jobs=-1
+        )
+        
+        cv_strategy = GroupKFold(n_splits=3) if groups_train is not None else 3
+        
+        scores = cross_val_score(model, X_train, y_train[:, 0], 
+                                 groups=groups_train, cv=cv_strategy, 
+                                 scoring="r2", n_jobs=-1)
+        mean_r2 = scores.mean()
+        print(f"    k={k:>2}  R²_steer={mean_r2:.4f}")
+        if mean_r2 > best_score:
+            best_score = mean_r2
+            best_k = k
+
+    print(f"  → k ottimale selezionato: {best_k}  (R²={best_score:.4f})")
+    return best_k
 
 
 # ─────────────────────────────────────────────
@@ -120,11 +155,9 @@ def evaluate(model: KNeighborsRegressor, X_test, y_test) -> dict:
     y_pred = model.predict(X_test)
     results = {}
 
-    target_names_mapping = {
-        "target_steer": "target_sterzata",
-        "target_accel": "target_accelerazione",
-        "target_brake": "target_frenata"
-    }
+    print("\n── Risultati sul Test Set (80/20 split) ──────────────")
+    print(f"  {'Target':<18} {'MAE':>8} {'RMSE':>8} {'R²':>8}")
+    print("  " + "─" * 44)
 
     for i, col in enumerate(TARGET_COLS):
         mae  = mean_absolute_error(y_test[:, i], y_pred[:, i])
@@ -132,12 +165,7 @@ def evaluate(model: KNeighborsRegressor, X_test, y_test) -> dict:
         r2   = r2_score(y_test[:, i], y_pred[:, i])
         results[col] = {"mae": mae, "rmse": rmse, "r2": r2,
                         "y_true": y_test[:, i], "y_pred": y_pred[:, i]}
-        
-        printed_name = target_names_mapping.get(col, col)
-        print(f"  {printed_name}:")
-        print(f"    MAE (Errore Assoluto Medio) = {mae:.4f}")
-        print(f"    RMSE (Radice dell'Errore Quadratico Medio) = {rmse:.4f}")
-        print(f"    R² (Coefficiente di Determinazione) = {r2:.4f}")
+        print(f"  {col:<18} {mae:>8.4f} {rmse:>8.4f} {r2:>8.4f}")
 
     return results
 
@@ -216,30 +244,65 @@ def load_model() -> KNeighborsRegressor:
 # ─────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(description="Training KNN per Imitation Learning su TORCS")
+    parser.add_argument("--k",         type=int,  default=None,  help="Numero vicini (default: auto)")
+    parser.add_argument("--find-k",    action="store_true",      help="Cerca k ottimale via CV")
+    parser.add_argument("--eval-only", action="store_true",      help="Rivaluta modello esistente senza ritraining")
     parser.add_argument("--dataset",   type=str,  default="dataset_clean.csv", help="Nome file del dataset in models/ (default: dataset_clean.csv)")
     args = parser.parse_args()
 
-    # 1. Carica (foto3: Caricamento dataset)
-    print("1/4 Caricamento dataset")
+    print("=" * 55)
+    print("  STEP 2 – Training KNN")
+    print("=" * 55)
+
+    # Carica dati
+    print(f"\n[1/4] Caricamento artefatti ({args.dataset}) da models/...")
     df, scaler, features = load_artifacts(dataset_filename=args.dataset)
 
     # Prepara X, y
-    X, y = prepare_xy(df, features, scaler)
+    X, y, groups = prepare_xy(df, features, scaler)
 
-    # 2. Split train/test (80/20 split) (foto4: Split per prevenire perdita di dati)
-    print("\n2/4 Split per prevenire perdita di dati")
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.20, random_state=RANDOM_STATE
-    )
+    # Split train/test
+    if groups is not None:
+        print("\n[!] Split per giri interi per prevenire Data Leakage (GroupShuffleSplit).")
+        gss = GroupShuffleSplit(n_splits=1, test_size=TEST_SIZE, random_state=RANDOM_STATE)
+        train_idx, test_idx = next(gss.split(X, y, groups=groups))
+        X_train, X_test = X[train_idx], X[test_idx]
+        y_train, y_test = y[train_idx], y[test_idx]
+        groups_train = groups[train_idx]
+    else:
+        print("\n[!] Colonna _source_file mancante, fallback su train_test_split casuale.")
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE
+        )
+        groups_train = None
+    print(f"  Train: {len(X_train)} campioni  |  Test: {len(X_test)} campioni")
 
-    # 3. Training (foto5: Addestramento KNN)
-    print("\n3/4 Addestramento KNN")
-    k = DEFAULT_K
-    model = train(X_train, y_train, k)
-    save_model(model)
+    if args.eval_only:
+        # Solo valutazione su modello esistente
+        print("\n[!] Modalità --eval-only: carico modello esistente...")
+        model = load_model()
+    else:
+        # Determina k
+        if args.k:
+            k = args.k
+            print(f"\n[2/4] k={k} (specificato dall'utente)")
+        elif args.find_k:
+            print("\n[2/4] Ricerca automatica del k ottimale (con GroupKFold)...")
+            k = find_best_k(X_train, y_train, groups_train=groups_train)
+        else:
+            k = DEFAULT_K
+            print(f"\n[2/4] k={k} (default)")
 
-    # 4. Valutazione
-    print("\n4/4 Valutazione sul test set...")
+        # Training
+        print(f"\n[3/4] Training KNN (k={k}, weights={DEFAULT_WEIGHTS}, algo={DEFAULT_ALGO})...")
+        model = train(X_train, y_train, k)
+        print("  Training completato.")
+
+        # Salva modello
+        save_model(model)
+
+    # Valutazione
+    print("\n[4/4] Valutazione sul test set...")
     results = evaluate(model, X_test, y_test)
 
     # Grafici
@@ -247,7 +310,33 @@ def main():
     plot_predictions(results)
     plot_residuals(results)
 
-    print("\n2°STEP COMPLETATO")
+    # Salvataggio Resoconto JSON
+    report = {
+        "k": k,
+        "results": {
+            col: {"mae": float(res["mae"]), "rmse": float(res["rmse"]), "r2": float(res["r2"])}
+            for col, res in results.items()
+        }
+    }
+    report_path = os.path.join(BASE_DIR, "reports", "report_step2.json")
+    with open(report_path, "w") as f:
+        json.dump(report, f, indent=4)
+    print(f"\n  Resoconto salvato in: {report_path}")
+
+    # Stima latenza inferenza (importante per real-time)
+    import time
+    n_queries = 500
+    t0 = time.perf_counter()
+    for _ in range(n_queries):
+        model.predict(X_test[:1])
+    dt_ms = (time.perf_counter() - t0) / n_queries * 1000
+    print(f"\n  Latenza media inferenza: {dt_ms:.2f} ms/step")
+    print(f"  (TORCS step rate: ~20ms → {'✓ OK' if dt_ms < 10 else '⚠ LENTO, considera riduzione feature o k'})")
+
+    print("\n" + "=" * 55)
+    print(f"  ✓ STEP 2 COMPLETATO")
+    print(f"  Prossimo: python step3_knn_drive.py")
+    print("=" * 55)
 
 
 if __name__ == "__main__":
