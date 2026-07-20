@@ -13,7 +13,7 @@ HOST = 'localhost'
 PORT = 3001
 SID = 'SCR'
 DATA_SIZE = 2**17
-TRACK_LIMIT = 1.3 
+TRACK_LIMIT = 1.5
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATASET_DIR = os.path.join(BASE_DIR, "dataset_laps")
