@@ -21,10 +21,10 @@ DATASET_DIR = os.path.join(BASE_DIR, "dataset_laps")
 if not os.path.exists(DATASET_DIR):
     os.makedirs(DATASET_DIR)
 
-# Mappatura del DualShock PS4
-AXIS_STEER = 0
-AXIS_ACCEL = 5
-AXIS_BRAKE = 4
+# Mappatura DualShock PS4
+AXIS_STEER = 0 #Analogico sinistro
+AXIS_ACCEL = 5 #R2
+AXIS_BRAKE = 4 #L2
 
 class ServerState():
     def __init__(self):
