@@ -294,10 +294,7 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
             accel = action["accel"]
             brake = action["brake"]
 
-            # Amplificazione freno e taglio acceleratore per contrastare l'effetto media del KNN
-            if brake > 0.05:
-                brake = min(1.0, brake * 2.5)
-                accel = max(0.0, accel - brake)
+
 
             wheel_vel = state.get('wheelSpinVel', [0,0,0,0])
             if len(wheel_vel) == 4:
