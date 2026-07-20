@@ -148,7 +148,7 @@ def balance_data(df: pd.DataFrame) -> pd.DataFrame:
     n_straight = len(df_straight_nobrake)
     n_important = len(df_important)
     
-    print(f"  Analisi traiettorie: {n_straight} rettilinei (senza freno), {n_important} curve/frenate importanti.")
+    print(f"  Analisi traiettorie: {n_straight} rettilinei, {n_important} curve/frenate importanti.")
     
     max_straight = int(n_important * 1.5)
     if n_straight > max_straight:
