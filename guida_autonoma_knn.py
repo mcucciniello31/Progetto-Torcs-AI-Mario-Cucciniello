@@ -291,9 +291,9 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
 
             # ── Aiuti alla guida (come nel manual control) ────────────────
             speed = state.get("speedX", 0)
-            steer = np.clip(action["steer"] * 1.15, -1.0, 1.0)
+            steer = np.clip(action["steer"] * 1.2, -1.0, 1.0)
             accel = action["accel"]
-            brake = np.clip(action["brake"] * 2.2, 0.0, 1.0)
+            brake = np.clip(action["brake"] * 2.3, 0.0, 1.0)
 
             wheel_vel = state.get('wheelSpinVel', [0,0,0,0])
             if len(wheel_vel) == 4:
