@@ -55,7 +55,7 @@ TARGET_RANGES = {
 }
 
 # Iperparametri default
-DEFAULT_K         = 3            # numero vicini (default se non cercato)
+DEFAULT_K         = 2            # numero vicini (default se non cercato)
 DEFAULT_WEIGHTS   = "distance"   # "uniform" oppure "distance"
 DEFAULT_ALGO      = "ball_tree"  # piu' veloce di "brute" su dataset medi
 DEFAULT_METRIC    = "euclidean"
