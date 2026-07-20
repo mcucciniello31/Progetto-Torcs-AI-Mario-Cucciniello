@@ -257,7 +257,7 @@ def normalize_and_save(df: pd.DataFrame):
     feature_path = os.path.join(MODELS_DIR, "feature_names.pkl")
     with open(feature_path, "wb") as f:
         pickle.dump(FEATURE_COLS, f)
-    print(f"  Feature names salvate: {feature_path}")
+    print(f"  Features salvate: {feature_path}")
 
 
 
