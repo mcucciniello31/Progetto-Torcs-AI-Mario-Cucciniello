@@ -138,6 +138,11 @@ def main():
         y_pred[:, 2] = np.clip(y_pred[:, 2], 0.0, 1.0)  # brake -> freno
 
         # Calcolo dei parametri
+        print("\nDefinizione delle metriche:")
+        print("  R2 Score : Coefficiente di Determinazione")
+        print("  MAE      : Errore Assoluto Medio")
+        print("  RMSE     : Radice dell'Errore Quadratico Medio")
+
         for i, col in enumerate(TARGET_COLS):
             r2 = r2_score(y_test[:, i], y_pred[:, i])
             mae = mean_absolute_error(y_test[:, i], y_pred[:, i])
