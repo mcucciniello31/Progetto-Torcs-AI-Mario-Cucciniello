@@ -213,11 +213,10 @@ def print_telemetry(step: int, state: dict, action: dict, source: str):
     ang  = state.get("angle", 0)
     gear = state.get("gear", 1)
     print(
-        f"  step={step:>5} | spd={spd:>6.1f} km/h | "
-        f"pos={tpos:>+.3f} | ang={ang:>+.3f} | "
-        f"gear={gear:.0f} | "
-        f"st={action['steer']:>+.3f} acc={action['accel']:.3f} brk={action['brake']:.3f} "
-        f"[{source}]"
+        f"  step={step:>5}   spd={spd:>6.1f} km/h   "
+        f"pos={tpos:>+.3f}   ang={ang:>+.3f}   "
+        f"gear={gear:.0f}   "
+        f"st={action['steer']:>+.3f}   acc={action['accel']:.3f}   brk={action['brake']:.3f}"
     )
 
 
