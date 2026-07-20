@@ -296,6 +296,13 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
 
 
             # Frenata preventiva progressiva (Safety Fallback per alte velocità)
+            # Frenata preventiva solo ad altissima velocità (es. staccata del rettilineo principale > 170 km/h)
+            track_list = state.get("track", [200.0]*19)
+            track_front = track_list[9] if len(track_list) > 9 else 200.0
+            if speed > 170.0 and track_front < 75.0 and abs(steer) < 0.15:
+                accel = 0.0
+                brake = max(brake, 0.8)
+
             # Ripartizione e rilascio in curva per evitare testacoda (EBD)
             if brake > 0.05:
                 accel = 0.0
