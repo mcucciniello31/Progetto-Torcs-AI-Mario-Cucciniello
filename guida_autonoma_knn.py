@@ -295,13 +295,25 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
             brake = action["brake"]
 
 
-            # Ripartizione frenata (frenata forte sul dritto, controllata in curva per evitare testacoda)
+            # Frenata preventiva progressiva (Safety Fallback per alte velocità)
+            track_list = state.get("track", [200.0]*19)
+            track_front = track_list[9] if len(track_list) > 9 else 200.0
+            
+            # Se andiamo veloci (>100 km/h) e la curva si avvicina (<120m)
+            if speed > 100.0 and track_front < 120.0:
+                accel = 0.0
+                if track_front < 70.0:
+                    brake = max(brake, 0.8)  # staccata forte vicino alla curva
+                else:
+                    # Rallentamento progressivo: da 0.2 a 0.7 man mano che ci avviciniamo
+                    progress = (120.0 - track_front) / (120.0 - 70.0)
+                    brake = max(brake, 0.2 + progress * 0.5)
+
+            # Ripartizione e rilascio in curva per evitare testacoda (EBD)
             if brake > 0.05:
                 accel = 0.0
-                if abs(steer) < 0.15:
-                    brake = min(1.0, brake * 2.0)  # frena forte in rettilineo
-                else:
-                    brake = min(0.3, brake)        # limita il freno in curva per non sbandare
+                if abs(steer) >= 0.15:
+                    brake = min(0.3, brake)  # limita il freno se stiamo sterzando
 
             wheel_vel = state.get('wheelSpinVel', [0,0,0,0])
             if len(wheel_vel) == 4:
@@ -312,7 +324,7 @@ def drive_loop(agent: KNNAgent, host: str, port: int,
                 if brake > 0.1 and speed > 15 and (wheel_vel[0]+wheel_vel[1])/2.0 < 5:
                     brake *= 0.1
 
-            # Ripartitore frenata in curva (sostituito dalla logica di ripartizione sopra)
+            # Ripartitore frenata in curva (sostituito dalle logiche sopra)
             # if brake > 0.1 and abs(steer) > 0.15: 
             #     brake *= (1.0 - abs(steer)*0.8)
 
