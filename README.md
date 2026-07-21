@@ -45,9 +45,9 @@ All'interno della cartella `media/` possiamo trovare i file multimediali di pres
 ## 🛠️ Passaggi Sequenziali per l'Esecuzione
 
 ### Passo 0: Registrazione dei Giri di Guida (Opzionale)
-Se desideri raccogliere nuovi dati di guida personalizzati anziché utilizzare quelli già pronti in `dataset_laps/`, puoi registrare la telemetria usando una delle seguenti tre modalità di controllo manuale:
+Se si desidera raccogliere nuovi dati di guida personalizzati anziché utilizzare quelli già pronti in `dataset_laps/`, si può registrare la telemetria usando una delle seguenti tre modalità di controllo manuale:
 
-1. **Controllo con Tastiera:**
+1. **Controllo con Tastiera:** ---> NON FUNZIONANTE (non implementato: poichè di difficile utilizzo per un tracciato con molte curve)
    Soluzione rapida senza controller esterni (usa frecce direzionali e tasti dedicati).
    ```bash
    python script/controllo_manuale_tastiera.py
