@@ -1,6 +1,6 @@
 # Progetto Guida Autonoma in TORCS (Behavioral Cloning via K-NN)
 
-Questo repository contiene il progetto di guida autonoma sviluppato per l'insegnamento di **Artificial Intelligence: Metodi e Applicazioni**. L'obiettivo è realizzare un agente intelligente in grado di guidare autonomamente in pista all'interno del simulatore TORCS mediante tecniche di **Behavioral Cloning (Imitation Learning)**.
+Questo repository contiene il progetto di guida autonoma sviluppato per l'insegnamento di **Artificial Intelligence: Metodi e Applicazioni** da parte di Mario Cucciniello. L'obiettivo è realizzare un agente intelligente in grado di guidare autonomamente in pista all'interno del simulatore TORCS mediante tecniche di **Behavioral Cloning (Imitation Learning)**.
 
 ---
 
