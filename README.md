@@ -44,8 +44,6 @@ All'interno della cartella `media/` possiamo trovare i file multimediali di pres
 
 ## 🛠️ Passaggi Sequenziali per l'Esecuzione
 
-Segui i passaggi in ordine per preparare i dati, addestrare il modello e lanciare la guida autonoma sul tuo PC:
-
 ### Passo 1: Preparazione e Pulizia del Dataset
 Unisce tutti i file CSV dei giri salvati in `dataset_laps/`, effettua la pulizia dei dati e bilancia i campioni per dare peso alle fasi di frenata:
 ```bash
