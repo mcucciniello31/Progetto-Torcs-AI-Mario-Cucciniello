@@ -44,6 +44,27 @@ All'interno della cartella `media/` possiamo trovare i file multimediali di pres
 
 ## 🛠️ Passaggi Sequenziali per l'Esecuzione
 
+### Passo 0: Registrazione dei Giri di Guida (Opzionale)
+Se desideri raccogliere nuovi dati di guida personalizzati anziché utilizzare quelli già pronti in `dataset_laps/`, puoi registrare la telemetria usando una delle seguenti tre modalità di controllo manuale:
+
+1. **Controllo con Tastiera:**
+   Soluzione rapida senza controller esterni (usa frecce direzionali e tasti dedicati).
+   ```bash
+   python script/controllo_manuale_tastiera.py
+   ```
+2. **Controllo con Controller DualShock 4 PS4 (Standard):**
+   Consente di pilotare l'auto in modo fluido sfruttando le levette e i grilletti analogici del joystick per dosare sterzo e pedali.
+   ```bash
+   python controllo_manuale_dualshockPS4.py
+   ```
+3. **Controllo con Controller DualShock 4 PS4 (Recovery / Manovre di Ripristino):**
+   Configurato per registrare giri in cui si commettono errori deliberati e manovre di salvataggio (es. retromarcia per staccarsi dal muro). Insegna al KNN ad eseguire il "recovery" in situazioni di emergenza.
+   ```bash
+   python controllo_manuale_dualshockPS4_recovery.py
+   ```
+
+*Ogni sessione di guida salvata genererà un file CSV telemetrico all'interno della cartella `dataset_laps/`.*
+
 ### Passo 1: Preparazione e Pulizia del Dataset
 Unisce tutti i file CSV dei giri salvati in `dataset_laps/`, effettua la pulizia dei dati e bilancia i campioni per dare peso alle fasi di frenata:
 ```bash
