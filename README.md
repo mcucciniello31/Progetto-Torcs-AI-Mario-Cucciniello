@@ -35,10 +35,10 @@ Per superare i limiti naturali di "smoothing" (appiattimento della media) del KN
 
 ## 📂 Struttura della Cartella `media/`
 
-All'interno della cartella `media/` puoi trovare i file multimediali di presentazione del progetto:
-* [corkscrew.png](file:///Users/macucc/Downloads/AI-AutonomeGuide/media/Cornscrew.png) - Mappa dettagliata e andamento altimetrico della celebre curva.
-* [giro_migliore_Ai.png](file:///Users/macucc/Downloads/AI-AutonomeGuide/media/giro_migliore_Ai.png) - Screenshot dell'auto guidata dall'AI in percorrenza.
-* [giro_migliore_AI.mov](file:///Users/macucc/Downloads/AI-AutonomeGuide/media/giro_migliore_AI.mov) - Video del giro migliore registrato in risoluzione ottimizzata, che dimostra la stabilità dell'agente KNN durante la corsa.
+All'interno della cartella `media/` possiamo trovare i file multimediali di presentazione del progetto:
+* [corkscrew.png](file:///Users/macucc/Downloads/AI-AutonomeGuide/media/Cornscrew.png) - Mappa dettagliata del tracciato Corkscrew
+* [giro_migliore_Ai.png](file:///Users/macucc/Downloads/AI-AutonomeGuide/media/giro_migliore_Ai.png) - Screenshot dell'auto guidata dall'AI (il miglior tempo) - 01:22:56
+* [giro_migliore_AI.mov](file:///Users/macucc/Downloads/AI-AutonomeGuide/media/giro_migliore_AI.mov) - Video del giro migliore registrato in risoluzione 480p (per problemi di push su git)
 
 ---
 
