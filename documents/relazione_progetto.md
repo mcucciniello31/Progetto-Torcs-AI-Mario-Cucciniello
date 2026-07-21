@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="file:///Users/macucc/Downloads/AI-AutonomeGuide/media/logo_universita.png" width="140" style="display: block; margin: 0 auto;" />
+  <img src="media/logo_universita.png" width="140" style="display: block; margin: 0 auto;" />
 </div>
 
 # Università degli Studi di Salerno
