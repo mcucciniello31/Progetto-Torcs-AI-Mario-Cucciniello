@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="file:///Users/macucc/Downloads/AI-AutonomeGuide/media/logo_universita.png" width="140" style="display: block; margin: 0 auto;" />
+</div>
+
 # Università degli Studi di Salerno
 ## Dipartimento di Ingegneria Elettrica e Matematica Applicata
 **Corso di Laurea in Ingegneria Informatica**
@@ -5,7 +9,7 @@
 
 ---
 
-# Progetto di Fine Corso: Progettazione di un Agente di Guida Autonoma su simulatore TORCS
+# Progettazione di un Agente di Guida Autonoma su simulatore TORCS
 ### Implementazione e valutazione tramite Behavioral Cloning con algoritmo K-Nearest Neighbors
 
 **Studente:**
@@ -15,7 +19,7 @@ Mario Cucciniello (Matr. **0612709473**)
 * Prof. Vento Mario
 * Prof.ssa Saggese Alessia
 
----
+<div style="page-break-after: always;"></div>
 
 ## Indice
 1. **Introduzione**
@@ -36,7 +40,7 @@ Mario Cucciniello (Matr. **0612709473**)
      * 4.2.4 Frenata Preventiva per l'Ingresso Chicane
 5. **Risultati e Conclusioni**
 
----
+<div style="page-break-after: always;"></div>
 
 ## 1. Introduzione
 
@@ -49,7 +53,7 @@ La pipeline di sviluppo si articola in tre fasi fondamentali:
 2. **Addestramento:** Pre-elaborazione, bilanciamento del dataset e fitting di un regressore spaziale **K-Nearest Neighbors (KNN)**.
 3. **Guida autonoma:** Controllo a ciclo chiuso tramite pacchetti UDP scambiati a 50Hz, integrando moduli di post-processing fisici (ABS, TCS, staccata preventiva della chicane) per superare i limiti strutturali di smoothing del modello matematico.
 
----
+<div style="page-break-after: always;"></div>
 
 ## 2. Raccolta e Preparazione dei Dati
 
@@ -93,7 +97,7 @@ Il dataset finale consolidato è composto da circa **55.000 frame** di telemetri
 
 L'elevata deviazione standard dello sterzo nelle vicinanze della chicane riflette le repentine correzioni di traiettoria necessarie per impostare i cambi di direzione destra-sinistra.
 
----
+<div style="page-break-after: always;"></div>
 
 ## 3. Addestramento del Modello KNN
 
@@ -116,13 +120,8 @@ Il modello di machine learning utilizzato è un **K-Neighbors Regressor** (`KNei
 ### 3.3 Valutazione Prestazionale sul Test Set
 Il dataset bilanciato è stato suddiviso in un **80% per il training set** e un **20% per il test set**. Le prestazioni del modello sulle tre variabili di controllo sono descritte nella tabella seguente tramite il coefficiente di determinazione ($R^2$), l'errore assoluto medio (MAE) e la radice dell'errore quadratico medio (RMSE):
 
-* **R2 Score:** Misura la proporzione di varianza dei comandi umani spiegata dal modello (valore ottimale = 1.0).
-* **MAE (Mean Absolute Error):** Rappresenta la media degli errori assoluti tra le azioni predette e quelle reali.
-* **RMSE (Root Mean Squared Error):** Penalizza maggiormente gli errori di grande entità.
-
-**Definizione delle metriche:**
 * **R2 Score:** Coefficiente di Determinazione
-* **MAE:** Errore Absoluto Medio
+* **MAE:** Errore Assoluto Medio
 * **RMSE:** Radice dell'Errore Quadratico Medio
 
 | Target di Controllo | R2 Score | MAE | RMSE |
@@ -133,7 +132,7 @@ Il dataset bilanciato è stato suddiviso in un **80% per il training set** e un 
 
 I risultati evidenziano un'ottima accuratezza, in particolare sulla frenata e sullo sterzo. L'errore leggermente superiore sull'acceleratore è causato dalla rapidità transitoria con cui il pilota rilascia o preme il pedale in uscita di curva.
 
----
+<div style="page-break-after: always;"></div>
 
 ## 4. Guida Autonoma in Tempo Reale
 
@@ -146,7 +145,7 @@ A runtime, lo script `guida_autonoma_knn.py` si connette a TORCS tramite socket 
 5. Sottopone le azioni predette ad una serie di controlli fisici e logiche di post-processing prima di trasmettere il pacchetto a TORCS.
 
 ### 4.2 Ottimizzazioni Fisiche e Controlli Attivi
-A causa dell'effetto di smoothing spaziale intrinseco dell'algoritmo KNN (che calcola una media locale tra vicini), le azioni di controllo predette tendono ad essere più blande rispetto a quelle reali (es. una frenata decisa a $1.0$ viene mitigata a $0.4$, e uno sterzo a $0.8$ scende a $0.5$). Per compensare questo fenomeno e garantire una guida sicura e veloce, sono state introdotte le seguenti logiche fisiche nel loop di controllo.
+A causa dell'effetto di smoothing spaziale intrinseco dell'algoritmo KNN (che calcola una media locale tra vicini), le azioni di controllo predette tendono ad essere più blande rispetto a quelle reali (es. una frenata decisa a $1.0$ viene mitigata a $0.4$, e uno sterzo a $0.8$ scende a $0.5$). Per compensare questo fenomeno e garantire una guida sciura e veloce, sono state introdotte le seguenti logiche fisiche nel loop di controllo.
 
 #### 4.2.1 Moltiplicatori di Controllo (Steer & Brake Boost)
 I comandi grezzi predetti dal modello KNN vengono amplificati tramite opportuni moltiplicatori calibrati su pista e successivamente limitati entro i range di sicurezza tramite saturazione (`clip`):
@@ -176,7 +175,7 @@ $$\text{Se } (\text{speedX} > 70) \land (|\text{steer}| < 0.05) \land (\text{tra
 
 Non appena il veicolo inizia la svolta impostando la traiettoria ($\text{steer} \ge 0.05$), la regola si disattiva istantaneamente, lasciando che l'auto scorra fluida e veloce all'interno della chicane senza inutili rallentamenti in percorrenza.
 
----
+<div style="page-break-after: always;"></div>
 
 ## 5. Risultati e Conclusioni
 
